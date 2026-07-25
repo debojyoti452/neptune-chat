@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:neptune_app/core/ble/ble_service.dart';
 import 'package:neptune_app/core/crypto/key_storage_service.dart';
 import 'package:neptune_app/core/discovery/peer_discovery_service.dart';
 import 'package:neptune_app/core/node/transport_router.dart';
@@ -15,6 +16,8 @@ class MockNostrRelayClient extends Mock implements NostrRelayClient {}
 class MockPeerDiscoveryService extends Mock implements PeerDiscoveryService {}
 
 class MockKeyStorageService extends Mock implements KeyStorageService {}
+
+class MockBleService extends Mock implements BleService {}
 
 const _testEvent = NostrEvent(
   id: 'deadbeef00112233',
@@ -32,6 +35,7 @@ void main() {
   late MockNostrRelayClient mockRelay;
   late MockPeerDiscoveryService mockDiscovery;
   late MockKeyStorageService mockKeyStorage;
+  late MockBleService mockBle;
   late TransportRouter router;
 
   setUpAll(() {
@@ -42,14 +46,18 @@ void main() {
     mockRelay = MockNostrRelayClient();
     mockDiscovery = MockPeerDiscoveryService();
     mockKeyStorage = MockKeyStorageService();
+    mockBle = MockBleService();
 
     router = TransportRouter(
       internetRelay: mockRelay,
       discovery: mockDiscovery,
       keyStorage: mockKeyStorage,
+      ble: mockBle,
     );
 
     when(() => mockRelay.sendEvent(any())).thenAnswer((_) {});
+    when(() => mockBle.send(any(), toPubkey: any(named: 'toPubkey')))
+        .thenAnswer((_) async => false);
   });
 
   group('send — internet relay fallback', () {
