@@ -8,7 +8,6 @@ import '../crypto/key_storage_service.dart';
 import '../discovery/peer_discovery_service.dart';
 import '../nostr/nostr_event.dart';
 import '../nostr/nostr_relay_client.dart';
-import 'route_envelope.dart';
 
 @singleton
 class TransportRouter {
@@ -17,12 +16,10 @@ class TransportRouter {
   final KeyStorageService _keyStorage;
 
   TransportRouter({
-    required NostrRelayClient internetRelay,
-    required PeerDiscoveryService discovery,
-    required KeyStorageService keyStorage,
-  }) : _internetRelay = internetRelay,
-       _discovery = discovery,
-       _keyStorage = keyStorage;
+    required this._internetRelay,
+    required this._discovery,
+    required this._keyStorage,
+  });
 
   Future<void> send(NostrEvent event, {String? toPubkey}) async {
     if (toPubkey != null) {
