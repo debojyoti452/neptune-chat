@@ -15,8 +15,9 @@ class BleMessageCodec {
     final chunks = <Uint8List>[];
     var offset = 0;
     while (offset < frame.length) {
-      final end =
-          (offset + chunkSize < frame.length) ? offset + chunkSize : frame.length;
+      final end = (offset + chunkSize < frame.length)
+          ? offset + chunkSize
+          : frame.length;
       chunks.add(Uint8List.fromList(frame.sublist(offset, end)));
       offset = end;
     }

@@ -15,25 +15,24 @@ class BleChannel {
       .map((e) => Map<String, dynamic>.from(e as Map));
 
   Future<void> startServer() => _method.invokeMethod('startServer', {
-        'serviceUuid': neptuneServiceUuid,
-        'writeCharUuid': neptuneWriteCharUuid,
-        'notifyCharUuid': neptuneNotifyCharUuid,
-      });
+    'serviceUuid': neptuneServiceUuid,
+    'writeCharUuid': neptuneWriteCharUuid,
+    'notifyCharUuid': neptuneNotifyCharUuid,
+  });
 
-  Future<void> startAdvertising(List<int> serviceData) =>
-      _method.invokeMethod('startAdvertising', {
-        'serviceUuid': neptuneServiceUuid,
-        'serviceData': serviceData,
-      });
+  Future<void> startAdvertising(List<int> serviceData) => _method.invokeMethod(
+    'startAdvertising',
+    {'serviceUuid': neptuneServiceUuid, 'serviceData': serviceData},
+  );
 
   Future<void> stopAdvertising() => _method.invokeMethod('stopAdvertising');
 
   Future<void> stopServer() => _method.invokeMethod('stopServer');
 
   Future<void> startScan() => _method.invokeMethod('startScan', {
-        'serviceUuid': neptuneServiceUuid,
-        'timeoutMs': bleScanTimeout.inMilliseconds,
-      });
+    'serviceUuid': neptuneServiceUuid,
+    'timeoutMs': bleScanTimeout.inMilliseconds,
+  });
 
   Future<void> stopScan() => _method.invokeMethod('stopScan');
 
@@ -41,10 +40,10 @@ class BleChannel {
       _method.invokeMethod('connect', {'deviceId': deviceId});
 
   Future<int> requestMtu(String deviceId, int mtu) async {
-    final result = await _method.invokeMethod<int>(
-      'requestMtu',
-      {'deviceId': deviceId, 'mtu': mtu},
-    );
+    final result = await _method.invokeMethod<int>('requestMtu', {
+      'deviceId': deviceId,
+      'mtu': mtu,
+    });
     return result ?? mtu;
   }
 
