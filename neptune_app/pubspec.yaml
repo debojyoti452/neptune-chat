@@ -36,8 +36,6 @@ dependencies:
   convert: ^3.1.2
   uuid: ^4.5.1
 
-  flutter_blue_plus: ^2.3.11
-
   shelf: ^1.4.0
   shelf_web_socket: ^3.0.0
 

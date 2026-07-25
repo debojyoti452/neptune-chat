@@ -12,20 +12,17 @@ import '../nostr/nostr_relay_client.dart';
 
 @singleton
 class TransportRouter {
+  TransportRouter({
+    required this._internetRelay,
+    required this._discovery,
+    required this._keyStorage,
+    required this._ble,
+  });
+
   final NostrRelayClient _internetRelay;
   final PeerDiscoveryService _discovery;
   final KeyStorageService _keyStorage;
   final BleService _ble;
-
-  TransportRouter({
-    required NostrRelayClient internetRelay,
-    required PeerDiscoveryService discovery,
-    required KeyStorageService keyStorage,
-    required BleService ble,
-  })  : _internetRelay = internetRelay,
-        _discovery = discovery,
-        _keyStorage = keyStorage,
-        _ble = ble;
 
   Future<void> send(NostrEvent event, {String? toPubkey}) async {
     if (toPubkey != null) {

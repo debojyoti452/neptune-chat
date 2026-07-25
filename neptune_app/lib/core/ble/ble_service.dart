@@ -1,12 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
-import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:injectable/injectable.dart';
 
 import '../nostr/nostr_event.dart';
+import 'ble_channel.dart';
 import 'ble_constants.dart';
 import 'ble_message_codec.dart';
 
@@ -14,76 +13,57 @@ typedef InboundEventHandler = Future<void> Function(NostrEvent event);
 
 @singleton
 class BleService {
+  BleService(this._channel);
+
+  final BleChannel _channel;
+
   InboundEventHandler? onEvent;
 
-  String? _myPubkey;
-  StreamSubscription<List<ScanResult>>? _scanSub;
-  final _decoders = <DeviceIdentifier, BleMessageDecoder>{};
-  final _connectedDevices = <DeviceIdentifier, BluetoothDevice>{};
+  StreamSubscription<Map<String, dynamic>>? _eventSub;
+  final _decoders = <String, BleMessageDecoder>{};
 
   Future<void> start(String myPubkey) async {
-    _myPubkey = myPubkey;
-    await _startAdvertising(myPubkey);
+    await _channel.startServer();
+    final prefix = _pubkeyHashPrefix(myPubkey);
+    await _channel.startAdvertising(prefix);
+
+    _eventSub = _channel.eventStream.listen(_handleEvent);
+    debugPrint('[Neptune] BLE: started');
   }
 
   Future<void> stop() async {
-    await _stopScan();
-    for (final device in _connectedDevices.values) {
-      await device.disconnect();
-    }
-    _connectedDevices.clear();
+    await _eventSub?.cancel();
+    _eventSub = null;
     _decoders.clear();
-    _myPubkey = null;
     try {
-      await FlutterBluePlus.stopAdvertising();
+      await _channel.stopScan();
+    } catch (_) {}
+    try {
+      await _channel.stopAdvertising();
+    } catch (_) {}
+    try {
+      await _channel.stopServer();
     } catch (_) {}
   }
 
   Future<bool> send(NostrEvent event, {required String toPubkey}) async {
     try {
       final hashPrefix = _pubkeyHashPrefix(toPubkey);
-      final device = await _scanForPeer(hashPrefix);
-      if (device == null) return false;
+      final deviceId = await _scanForPeer(hashPrefix);
+      if (deviceId == null) return false;
 
-      await device.connect(timeout: const Duration(seconds: 8));
-      final mtu = await device.requestMtu(512);
-
-      final services = await device.discoverServices();
-      BluetoothCharacteristic? writeChar;
-      BluetoothCharacteristic? notifyChar;
-
-      for (final svc in services) {
-        if (svc.uuid == neptuneServiceUuid) {
-          for (final char in svc.characteristics) {
-            if (char.uuid == neptuneWriteCharUuid) writeChar = char;
-            if (char.uuid == neptuneNotifyCharUuid) notifyChar = char;
-          }
-        }
-      }
-
-      if (writeChar == null) {
-        await device.disconnect();
-        return false;
-      }
-
-      if (notifyChar != null) {
-        await notifyChar.setNotifyValue(true);
-        _decoders[device.remoteId] ??= BleMessageDecoder();
-        notifyChar.lastValueStream.listen((chunk) {
-          _handleNotifyChunk(device.remoteId, Uint8List.fromList(chunk));
-        });
-      }
+      await _channel.connect(deviceId);
+      final mtu = await _channel.requestMtu(deviceId, 512);
 
       final json = jsonEncode(event.toJson());
       final chunks = BleMessageCodec.encode(json, mtu);
       for (final chunk in chunks) {
-        await writeChar.write(chunk, withoutResponse: true);
+        await _channel.writeChar(deviceId, chunk);
       }
 
       debugPrint('[Neptune] BLE: sent event ${event.id.substring(0, 8)}...');
 
-      await device.disconnect();
-      _connectedDevices.remove(device.remoteId);
+      await _channel.disconnect(deviceId);
       return true;
     } catch (e) {
       debugPrint('[Neptune] BLE: send failed ($e)');
@@ -91,64 +71,39 @@ class BleService {
     }
   }
 
-  Future<void> _startAdvertising(String pubkey) async {
-    try {
-      final hashPrefix = _pubkeyHashPrefix(pubkey);
-      await FlutterBluePlus.startAdvertising(
-        AdvertisementData(
-          localName: 'Neptune',
-          serviceUuids: [neptuneServiceUuid],
-          serviceData: {neptuneServiceUuid: hashPrefix},
-        ),
-      );
-      debugPrint('[Neptune] BLE: advertising started');
-    } catch (e) {
-      debugPrint('[Neptune] BLE: advertising failed ($e)');
-    }
-  }
+  Future<String?> _scanForPeer(Uint8List hashPrefix) async {
+    final completer = Completer<String?>();
+    StreamSubscription<Map<String, dynamic>>? scanSub;
 
-  Future<BluetoothDevice?> _scanForPeer(Uint8List hashPrefix) async {
-    final completer = Completer<BluetoothDevice?>();
-    Timer? timeoutTimer;
-
-    await FlutterBluePlus.startScan(
-      withServices: [neptuneServiceUuid],
-      timeout: bleScanTimeout,
-    );
-
-    timeoutTimer = Timer(bleScanTimeout, () {
-      if (!completer.isCompleted) completer.complete(null);
-    });
-
-    _scanSub = FlutterBluePlus.scanResults.listen((results) {
-      for (final result in results) {
-        final data =
-            result.advertisementData.serviceData[neptuneServiceUuid];
-        if (data != null && _prefixMatches(Uint8List.fromList(data), hashPrefix)) {
-          timeoutTimer?.cancel();
-          _scanSub?.cancel();
-          if (!completer.isCompleted) {
-            completer.complete(result.device);
-          }
-          return;
+    scanSub = _channel.eventStream.listen((evt) {
+      if (evt['type'] != 'scanResult') return;
+      final data = evt['serviceData'];
+      if (data == null) return;
+      final bytes = Uint8List.fromList(List<int>.from(data as List));
+      if (_prefixMatches(bytes, hashPrefix)) {
+        scanSub?.cancel();
+        if (!completer.isCompleted) {
+          completer.complete(evt['deviceId'] as String);
         }
       }
+    });
+
+    await _channel.startScan();
+
+    Timer(bleScanTimeout, () {
+      scanSub?.cancel();
+      if (!completer.isCompleted) completer.complete(null);
     });
 
     return completer.future;
   }
 
-  Future<void> _stopScan() async {
-    await _scanSub?.cancel();
-    _scanSub = null;
-    try {
-      await FlutterBluePlus.stopScan();
-    } catch (_) {}
-  }
-
-  void _handleNotifyChunk(DeviceIdentifier id, Uint8List chunk) {
-    final decoder = _decoders[id] ??= BleMessageDecoder();
-    final json = decoder.addChunk(chunk);
+  void _handleEvent(Map<String, dynamic> evt) {
+    if (evt['type'] != 'writeReceived') return;
+    final deviceId = evt['deviceId'] as String;
+    final data = Uint8List.fromList(List<int>.from(evt['data'] as List));
+    final decoder = _decoders[deviceId] ??= BleMessageDecoder();
+    final json = decoder.addChunk(data);
     if (json != null) {
       try {
         final event = NostrEvent.fromJson(

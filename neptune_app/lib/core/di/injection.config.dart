@@ -12,6 +12,7 @@
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:http/http.dart' as _i519;
 import 'package:injectable/injectable.dart' as _i526;
+import 'package:neptune_app/core/ble/ble_channel.dart' as _i42;
 import 'package:neptune_app/core/ble/ble_service.dart' as _i88;
 import 'package:neptune_app/core/crypto/key_storage_service.dart' as _i26;
 import 'package:neptune_app/core/di/app_module.dart' as _i317;
@@ -60,7 +61,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i26.KeyStorageService>(() => appModule.keyStorageService);
     gh.singleton<_i643.NostrRelayClient>(() => appModule.nostrRelayClient);
     gh.singleton<_i519.Client>(() => appModule.httpClient);
-    gh.singleton<_i88.BleService>(() => appModule.bleService);
+    gh.singleton<_i42.BleChannel>(() => _i42.BleChannel());
+    gh.singleton<_i88.BleService>(() => _i88.BleService(gh<_i42.BleChannel>()));
     gh.singleton<_i254.PeerDiscoveryService>(
       () => _i254.PeerDiscoveryService(
         gh<_i519.Client>(),
