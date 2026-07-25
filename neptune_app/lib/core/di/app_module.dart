@@ -1,6 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'package:injectable/injectable.dart';
 
+import '../ble/ble_service.dart';
 import '../crypto/key_storage_service.dart';
 import '../nostr/nostr_relay_client.dart';
 import '../storage/encrypted_db.dart';
@@ -35,6 +36,9 @@ abstract class AppModule {
 
   @singleton
   http.Client get httpClient => http.Client();
+
+  @singleton
+  BleService get bleService => BleService();
 
   @Named('apiBaseUrl')
   String get apiBaseUrl => _apiBaseUrl;

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../ble/ble_service.dart';
 import '../crypto/key_storage_service.dart';
 import '../discovery/peer_discovery_service.dart';
 import '../nostr/nostr_event.dart';
@@ -14,15 +15,23 @@ class TransportRouter {
   final NostrRelayClient _internetRelay;
   final PeerDiscoveryService _discovery;
   final KeyStorageService _keyStorage;
+  final BleService _ble;
 
   TransportRouter({
-    required this._internetRelay,
-    required this._discovery,
-    required this._keyStorage,
-  });
+    required NostrRelayClient internetRelay,
+    required PeerDiscoveryService discovery,
+    required KeyStorageService keyStorage,
+    required BleService ble,
+  })  : _internetRelay = internetRelay,
+        _discovery = discovery,
+        _keyStorage = keyStorage,
+        _ble = ble;
 
   Future<void> send(NostrEvent event, {String? toPubkey}) async {
     if (toPubkey != null) {
+      final bleSent = await _ble.send(event, toPubkey: toPubkey);
+      if (bleSent) return;
+
       final token = await _keyStorage.getAuthToken();
       if (token != null) {
         final hint = await _discovery.fetchLanHint(toPubkey, token);

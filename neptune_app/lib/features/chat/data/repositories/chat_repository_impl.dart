@@ -6,6 +6,7 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/ble/ble_service.dart';
 import '../../../../core/crypto/key_storage_service.dart';
 import '../../../../core/discovery/peer_discovery_service.dart';
 import '../../../../core/error/failures.dart';
@@ -34,6 +35,7 @@ class ChatRepositoryImpl implements ChatRepository {
   final NostrRelayClient _relay;
   final InboundServer _inboundServer;
   final PeerDiscoveryService _discovery;
+  final BleService _bleService;
 
   final _sessions = <String, (ChatSession, Uint8List)>{};
   final _incomingControllers = <String, StreamController<Message>>{};
@@ -48,8 +50,10 @@ class ChatRepositoryImpl implements ChatRepository {
     this._relay,
     this._inboundServer,
     this._discovery,
+    this._bleService,
   ) {
     _inboundServer.onEvent = (event) async => _onRelayEvent(event);
+    _bleService.onEvent = (event) async => _onRelayEvent(event);
   }
 
   @override
@@ -87,6 +91,7 @@ class ChatRepositoryImpl implements ChatRepository {
 
       _ensureRelaySubscription(myPubkey).ignore();
       _announceLan().ignore();
+      _bleService.start(myPubkey).ignore();
       return Right(session);
     } catch (e) {
       return Left(Failure.network(message: e.toString()));
@@ -191,6 +196,7 @@ class ChatRepositoryImpl implements ChatRepository {
         await _relaySub?.cancel();
         _relaySub = null;
         _relaySubscribed = false;
+        await _bleService.stop();
       }
 
       return const Right(unit);
