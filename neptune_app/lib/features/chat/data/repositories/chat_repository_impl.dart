@@ -8,7 +8,9 @@ import 'package:injectable/injectable.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/crypto/key_storage_service.dart';
+import '../../../../core/discovery/peer_discovery_service.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/node/inbound_server.dart';
 import '../../../../core/node/route_envelope.dart';
 import '../../../../core/node/transport_router.dart';
 import '../../../../core/nostr/nip44_cipher.dart';
@@ -31,6 +33,8 @@ class ChatRepositoryImpl implements ChatRepository {
   final KeyStorageService _keyStorage;
   final TransportRouter _router;
   final NostrRelayClient _relay;
+  final InboundServer _inboundServer;
+  final PeerDiscoveryService _discovery;
 
   final _sessions = <String, (ChatSession, Uint8List)>{};
   final _incomingControllers = <String, StreamController<Message>>{};
@@ -43,7 +47,11 @@ class ChatRepositoryImpl implements ChatRepository {
     this._keyStorage,
     this._router,
     this._relay,
-  );
+    this._inboundServer,
+    this._discovery,
+  ) {
+    _inboundServer.onEvent = (event) async => _onRelayEvent(event);
+  }
 
   @override
   Future<Either<Failure, ChatSession>> startSession(String peerPubkey) async {
@@ -77,6 +85,7 @@ class ChatRepositoryImpl implements ChatRepository {
       ));
 
       _ensureRelaySubscription(myPubkey).ignore();
+      _announceLan().ignore();
       return Right(session);
     } catch (e) {
       return Left(Failure.network(message: e.toString()));
@@ -212,6 +221,19 @@ class ChatRepositoryImpl implements ChatRepository {
         _handleIncomingEvent(entry.key, entry.value.$1, entry.value.$2, event);
       }
     }
+  }
+
+  Future<void> _announceLan() async {
+    try {
+      final token = await _keyStorage.getAuthToken();
+      if (token == null) return;
+      final ip = await _discovery.localIpAddress();
+      if (ip == null) return;
+      final port = _inboundServer.port;
+      if (port == null) return;
+      await _discovery.announceLan(ip: ip, port: port, token: token);
+      debugPrint('[Neptune] LAN: announced $ip:$port');
+    } catch (_) {}
   }
 
   Future<void> _handleIncomingEvent(
