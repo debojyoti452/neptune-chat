@@ -1,30 +1,53 @@
-import 'package:injectable/injectable.dart';
+import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
+import 'package:injectable/injectable.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
+
+import '../crypto/key_storage_service.dart';
+import '../discovery/peer_discovery_service.dart';
 import '../nostr/nostr_event.dart';
 import '../nostr/nostr_relay_client.dart';
-import 'route_envelope.dart';
 
 @singleton
 class TransportRouter {
   final NostrRelayClient _internetRelay;
+  final PeerDiscoveryService _discovery;
+  final KeyStorageService _keyStorage;
 
-  TransportRouter({required this._internetRelay});
+  TransportRouter({
+    required this._internetRelay,
+    required this._discovery,
+    required this._keyStorage,
+  });
 
   Future<void> send(NostrEvent event, {String? toPubkey}) async {
-    final transport = await _selectTransport(toPubkey);
-    switch (transport) {
-      case MessageTransport.internet:
-        _internetRelay.sendEvent(event);
-      case MessageTransport.lan:
-        break;
-      case MessageTransport.ble:
-        break;
-      case MessageTransport.relay:
-        _internetRelay.sendEvent(event);
+    if (toPubkey != null) {
+      final token = await _keyStorage.getAuthToken();
+      if (token != null) {
+        final hint = await _discovery.fetchLanHint(toPubkey, token);
+        if (hint != null) {
+          try {
+            await _sendViaLan(event, hint);
+            debugPrint('[Neptune] LAN: sent event to ${hint.ip}:${hint.port}');
+            return;
+          } catch (e) {
+            debugPrint(
+              '[Neptune] LAN: send failed ($e), falling back to internet',
+            );
+          }
+        }
+      }
     }
+    _internetRelay.sendEvent(event);
   }
 
-  Future<MessageTransport> _selectTransport(String? peerPubkey) async {
-    return MessageTransport.internet;
+  Future<void> _sendViaLan(NostrEvent event, PeerHint hint) async {
+    final channel = WebSocketChannel.connect(
+      Uri.parse('ws://${hint.ip}:${hint.port}'),
+    );
+    await channel.ready;
+    channel.sink.add(jsonEncode(['EVENT', event.toJson()]));
+    await channel.sink.close();
   }
 }

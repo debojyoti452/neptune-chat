@@ -21,3 +21,7 @@ neptune_backend/.elixir_ls/
 # OS
 .DS_Store
 Thumbs.db
+
+# Internal
+PROJECT_CONTEXT.md
+CLAUDE.md

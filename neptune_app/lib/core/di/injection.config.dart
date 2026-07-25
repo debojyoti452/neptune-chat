@@ -60,7 +60,10 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i643.NostrRelayClient>(() => appModule.nostrRelayClient);
     gh.singleton<_i519.Client>(() => appModule.httpClient);
     gh.singleton<_i254.PeerDiscoveryService>(
-      () => _i254.PeerDiscoveryService(),
+      () => _i254.PeerDiscoveryService(
+        gh<_i519.Client>(),
+        gh<String>(instanceName: 'apiBaseUrl'),
+      ),
     );
     gh.singleton<_i157.InboundServer>(() => _i157.InboundServer());
     gh.factory<String>(() => appModule.apiBaseUrl, instanceName: 'apiBaseUrl');
@@ -71,7 +74,11 @@ extension GetItInjectableX on _i174.GetIt {
       () => _i941.ChatLocalDatasourceImpl(gh<_i871.EncryptedDb>()),
     );
     gh.singleton<_i435.TransportRouter>(
-      () => _i435.TransportRouter(internetRelay: gh<_i643.NostrRelayClient>()),
+      () => _i435.TransportRouter(
+        internetRelay: gh<_i643.NostrRelayClient>(),
+        discovery: gh<_i254.PeerDiscoveryService>(),
+        keyStorage: gh<_i26.KeyStorageService>(),
+      ),
     );
     gh.lazySingleton<_i707.ChatRepository>(
       () => _i1054.ChatRepositoryImpl(
@@ -80,6 +87,8 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i26.KeyStorageService>(),
         gh<_i435.TransportRouter>(),
         gh<_i643.NostrRelayClient>(),
+        gh<_i157.InboundServer>(),
+        gh<_i254.PeerDiscoveryService>(),
       ),
     );
     gh.factory<_i805.AuthRemoteDatasource>(

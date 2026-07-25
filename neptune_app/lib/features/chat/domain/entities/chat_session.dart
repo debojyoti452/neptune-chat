@@ -18,6 +18,5 @@ class ChatSession extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, peerPubkey, transport, startedAt];
+  List<Object?> get props => [id, peerPubkey, transport, startedAt];
 }

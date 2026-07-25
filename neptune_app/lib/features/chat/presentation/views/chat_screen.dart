@@ -22,9 +22,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   void initState() {
     super.initState();
-    context
-        .read<ChatBloc>()
-        .add(ChatEvent.sessionStarted(peerPubkey: widget.peerPubkey));
+    context.read<ChatBloc>().add(
+      ChatEvent.sessionStarted(peerPubkey: widget.peerPubkey),
+    );
   }
 
   @override
@@ -70,27 +70,26 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         },
         builder: (context, state) => switch (state) {
-          ChatInitial() || ChatConnecting() => const Center(
-              child: CircularProgressIndicator(),
-            ),
+          ChatInitial() ||
+          ChatConnecting() => const Center(child: CircularProgressIndicator()),
           ChatActive(:final messages, :final isSending) => Column(
-              children: [
-                Expanded(
-                  child: ListView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    itemCount: messages.length,
-                    itemBuilder: (_, index) =>
-                        MessageBubble(message: messages[index]),
-                  ),
+            children: [
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (_, index) =>
+                      MessageBubble(message: messages[index]),
                 ),
-                _InputBar(
-                  controller: _controller,
-                  isSending: isSending,
-                  onSend: _send,
-                ),
-              ],
-            ),
+              ),
+              _InputBar(
+                controller: _controller,
+                isSending: isSending,
+                onSend: _send,
+              ),
+            ],
+          ),
           ChatError(:final message) => Center(child: Text(message)),
           ChatEnded() => const Center(child: Text('Session ended')),
         },
@@ -123,8 +122,10 @@ class _InputBar extends StatelessWidget {
                 decoration: const InputDecoration(
                   hintText: 'Message',
                   border: OutlineInputBorder(),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  contentPadding: EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 10,
+                  ),
                 ),
                 onSubmitted: (_) => onSend(),
               ),

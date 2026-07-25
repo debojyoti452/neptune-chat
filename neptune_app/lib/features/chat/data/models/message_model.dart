@@ -23,38 +23,38 @@ abstract class MessageModel with _$MessageModel {
       _$MessageModelFromJson(json);
 
   factory MessageModel.fromMap(Map<String, dynamic> map) => MessageModel(
-        id: map['id'] as String,
-        sessionId: map['session_id'] as String,
-        peerPubkey: map['peer_id'] as String,
-        ciphertext: map['ciphertext'] as String,
-        nonce: map['nonce'] as String,
-        direction: map['direction'] as String,
-        transport: map['transport'] as String,
-        sentAt: map['sent_at'] as int,
-      );
+    id: map['id'] as String,
+    sessionId: map['session_id'] as String,
+    peerPubkey: map['peer_id'] as String,
+    ciphertext: map['ciphertext'] as String,
+    nonce: map['nonce'] as String,
+    direction: map['direction'] as String,
+    transport: map['transport'] as String,
+    sentAt: map['sent_at'] as int,
+  );
 }
 
 extension MessageModelX on MessageModel {
   Map<String, dynamic> toMap() => {
-        'id': id,
-        'session_id': sessionId,
-        'peer_id': peerPubkey,
-        'ciphertext': ciphertext,
-        'nonce': nonce,
-        'direction': direction,
-        'transport': transport,
-        'sent_at': sentAt,
-      };
+    'id': id,
+    'session_id': sessionId,
+    'peer_id': peerPubkey,
+    'ciphertext': ciphertext,
+    'nonce': nonce,
+    'direction': direction,
+    'transport': transport,
+    'sent_at': sentAt,
+  };
 
   Message toEntity(String decryptedContent) => Message(
-        id: id,
-        sessionId: sessionId,
-        peerPubkey: peerPubkey,
-        content: decryptedContent,
-        direction: direction == 'sent'
-            ? MessageDirection.sent
-            : MessageDirection.received,
-        transport: MessageTransport.values.byName(transport),
-        sentAt: DateTime.fromMillisecondsSinceEpoch(sentAt),
-      );
+    id: id,
+    sessionId: sessionId,
+    peerPubkey: peerPubkey,
+    content: decryptedContent,
+    direction: direction == 'sent'
+        ? MessageDirection.sent
+        : MessageDirection.received,
+    transport: MessageTransport.values.byName(transport),
+    sentAt: DateTime.fromMillisecondsSinceEpoch(sentAt),
+  );
 }

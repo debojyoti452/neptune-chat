@@ -19,7 +19,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   StreamSubscription<Message>? _incomingSub;
 
   ChatBloc(this._repository, this._sendMessage, this._loadHistory)
-      : super(const ChatState.initial()) {
+    : super(const ChatState.initial()) {
     on<ChatSessionStarted>(_onSessionStarted);
     on<ChatMessageSent>(_onMessageSent);
     on<ChatMessageReceived>(_onMessageReceived);
@@ -62,11 +62,13 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final current = state;
     if (current is! ChatActive) return;
 
-    emit(ChatState.active(
-      session: current.session,
-      messages: current.messages,
-      isSending: true,
-    ));
+    emit(
+      ChatState.active(
+        session: current.session,
+        messages: current.messages,
+        isSending: true,
+      ),
+    );
 
     final result = await _sendMessage(current.session.id, event.content);
     if (result.isLeft()) {
@@ -82,30 +84,23 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     emit(ChatState.active(session: current.session, messages: updated));
   }
 
-  void _onMessageReceived(
-    ChatMessageReceived event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onMessageReceived(ChatMessageReceived event, Emitter<ChatState> emit) {
     final current = state;
     if (current is! ChatActive) return;
 
-    emit(ChatState.active(
-      session: current.session,
-      messages: [...current.messages, event.message],
-    ));
+    emit(
+      ChatState.active(
+        session: current.session,
+        messages: [...current.messages, event.message],
+      ),
+    );
   }
 
-  void _onHistoryLoaded(
-    ChatHistoryLoaded event,
-    Emitter<ChatState> emit,
-  ) {
+  void _onHistoryLoaded(ChatHistoryLoaded event, Emitter<ChatState> emit) {
     final current = state;
     if (current is! ChatActive) return;
 
-    emit(ChatState.active(
-      session: current.session,
-      messages: event.messages,
-    ));
+    emit(ChatState.active(session: current.session, messages: event.messages));
   }
 
   Future<void> _onSessionEnded(

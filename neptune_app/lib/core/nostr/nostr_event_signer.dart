@@ -22,7 +22,10 @@ abstract final class NostrEventSigner {
     final serialized = jsonEncode([0, pubkey, createdAt, kind, tags, content]);
     final idBytes = await _sha256(utf8.encode(serialized));
     final id = hex.encode(idBytes);
-    final sig = await _schnorrSign(Uint8List.fromList(hex.decode(privkey)), idBytes);
+    final sig = await _schnorrSign(
+      Uint8List.fromList(hex.decode(privkey)),
+      idBytes,
+    );
     return NostrEvent(
       id: id,
       pubkey: pubkey,
@@ -34,7 +37,10 @@ abstract final class NostrEventSigner {
     );
   }
 
-  static Future<Uint8List> _schnorrSign(Uint8List privBytes, Uint8List msg) async {
+  static Future<Uint8List> _schnorrSign(
+    Uint8List privBytes,
+    Uint8List msg,
+  ) async {
     final n = _curve.n;
     final d0 = BigInt.parse(hex.encode(privBytes), radix: 16);
     final p = (_curve.G * d0)!;
@@ -86,7 +92,10 @@ abstract final class NostrEventSigner {
   static Uint8List _bigIntToBytes(BigInt value, int length) {
     final h = value.toRadixString(16).padLeft(length * 2, '0');
     return Uint8List.fromList(
-      List.generate(length, (i) => int.parse(h.substring(i * 2, i * 2 + 2), radix: 16)),
+      List.generate(
+        length,
+        (i) => int.parse(h.substring(i * 2, i * 2 + 2), radix: 16),
+      ),
     );
   }
 }

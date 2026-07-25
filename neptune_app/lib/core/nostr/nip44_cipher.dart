@@ -16,10 +16,22 @@ abstract final class Nip44Cipher {
     final keys = await _messageKeys(conversationKey, nonce);
 
     final padded = _pad(utf8.encode(plaintext));
-    final ciphertext = await _chacha20Encrypt(keys.cipherKey, keys.chachaNonce, padded);
-    final mac = await _hmacSha256(keys.hmacKey, Uint8List.fromList([...nonce, ...ciphertext]));
+    final ciphertext = await _chacha20Encrypt(
+      keys.cipherKey,
+      keys.chachaNonce,
+      padded,
+    );
+    final mac = await _hmacSha256(
+      keys.hmacKey,
+      Uint8List.fromList([...nonce, ...ciphertext]),
+    );
 
-    final payload = Uint8List.fromList([_version, ...nonce, ...ciphertext, ...mac]);
+    final payload = Uint8List.fromList([
+      _version,
+      ...nonce,
+      ...ciphertext,
+      ...mac,
+    ]);
     return base64.encode(payload);
   }
 
@@ -48,13 +60,15 @@ abstract final class Nip44Cipher {
       throw StateError('NIP-44 MAC verification failed');
     }
 
-    final padded = await _chacha20Decrypt(keys.cipherKey, keys.chachaNonce, ciphertext);
+    final padded = await _chacha20Decrypt(
+      keys.cipherKey,
+      keys.chachaNonce,
+      ciphertext,
+    );
     return utf8.decode(_unpad(padded));
   }
 
-  static Future<Uint8List> conversationKey(
-    Uint8List sharedSecret,
-  ) async {
+  static Future<Uint8List> conversationKey(Uint8List sharedSecret) async {
     final hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 32);
     final output = await hkdf.deriveKey(
       secretKey: SecretKey(sharedSecret),
@@ -64,8 +78,10 @@ abstract final class Nip44Cipher {
     return Uint8List.fromList(await output.extractBytes());
   }
 
-  static Future<({Uint8List cipherKey, Uint8List chachaNonce, Uint8List hmacKey})>
-      _messageKeys(Uint8List convKey, List<int> nonce) async {
+  static Future<
+    ({Uint8List cipherKey, Uint8List chachaNonce, Uint8List hmacKey})
+  >
+  _messageKeys(Uint8List convKey, List<int> nonce) async {
     final hkdf = Hkdf(hmac: Hmac.sha256(), outputLength: 76);
     final expanded = await hkdf.deriveKey(
       secretKey: SecretKey(convKey),

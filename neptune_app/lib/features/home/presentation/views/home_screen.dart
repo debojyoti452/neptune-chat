@@ -31,7 +31,9 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final authState = context.watch<AuthCubit>().state;
-    final pubkey = authState is AuthAuthenticated ? authState.identity.pubkey : '';
+    final pubkey = authState is AuthAuthenticated
+        ? authState.identity.pubkey
+        : '';
 
     return Scaffold(
       appBar: AppBar(title: const Text('Neptune')),
@@ -40,14 +42,20 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Your identity', style: Theme.of(context).textTheme.labelLarge),
+            Text(
+              'Your identity',
+              style: Theme.of(context).textTheme.labelLarge,
+            ),
             const SizedBox(height: 4),
             Row(
               children: [
                 Expanded(
                   child: SelectableText(
                     pubkey,
-                    style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 11,
+                    ),
                   ),
                 ),
                 IconButton(
