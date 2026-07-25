@@ -20,9 +20,9 @@ class TransportRouter {
     required NostrRelayClient internetRelay,
     required PeerDiscoveryService discovery,
     required KeyStorageService keyStorage,
-  })  : _internetRelay = internetRelay,
-        _discovery = discovery,
-        _keyStorage = keyStorage;
+  }) : _internetRelay = internetRelay,
+       _discovery = discovery,
+       _keyStorage = keyStorage;
 
   Future<void> send(NostrEvent event, {String? toPubkey}) async {
     if (toPubkey != null) {
@@ -35,7 +35,9 @@ class TransportRouter {
             debugPrint('[Neptune] LAN: sent event to ${hint.ip}:${hint.port}');
             return;
           } catch (e) {
-            debugPrint('[Neptune] LAN: send failed ($e), falling back to internet');
+            debugPrint(
+              '[Neptune] LAN: send failed ($e), falling back to internet',
+            );
           }
         }
       }

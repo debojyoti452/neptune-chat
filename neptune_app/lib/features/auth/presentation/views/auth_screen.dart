@@ -31,23 +31,22 @@ class _AuthScreenState extends State<AuthScreen> {
       child: Scaffold(
         body: BlocBuilder<AuthCubit, AuthState>(
           builder: (context, state) => switch (state) {
-            AuthInitial() || AuthLoading() => const Center(
-                child: CircularProgressIndicator(),
-              ),
+            AuthInitial() ||
+            AuthLoading() => const Center(child: CircularProgressIndicator()),
             AuthAuthenticated() => const SizedBox.shrink(),
             AuthError(:final message) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(message),
-                    const SizedBox(height: 16),
-                    FilledButton(
-                      onPressed: () => context.read<AuthCubit>().initialize(),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(message),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.read<AuthCubit>().initialize(),
+                    child: const Text('Retry'),
+                  ),
+                ],
               ),
+            ),
           },
         ),
       ),

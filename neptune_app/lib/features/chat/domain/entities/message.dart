@@ -24,6 +24,13 @@ class Message extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, sessionId, peerPubkey, content, direction, transport, sentAt];
+  List<Object?> get props => [
+    id,
+    sessionId,
+    peerPubkey,
+    content,
+    direction,
+    transport,
+    sentAt,
+  ];
 }

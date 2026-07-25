@@ -100,7 +100,9 @@ class NostrRelayClient {
       case 'OK':
         final accepted = msg.length >= 3 ? msg[2] as bool : false;
         final reason = msg.length >= 4 ? msg[3] as String : '';
-        debugPrint('[Neptune] relay OK: id=${(msg[1] as String).substring(0, 8)}... accepted=$accepted reason=$reason');
+        debugPrint(
+          '[Neptune] relay OK: id=${(msg[1] as String).substring(0, 8)}... accepted=$accepted reason=$reason',
+        );
       case 'EOSE':
         if (msg.length >= 2) _eoseController.add(msg[1] as String);
       case 'NOTICE':

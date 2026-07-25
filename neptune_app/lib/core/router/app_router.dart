@@ -12,37 +12,31 @@ import 'go_router_refresh_stream.dart';
 
 abstract final class AppRouter {
   static GoRouter build(AuthCubit authCubit) => GoRouter(
-        initialLocation: Routes.auth,
-        refreshListenable: GoRouterRefreshStream(authCubit.stream),
-        redirect: (context, state) {
-          final isAuthenticated = authCubit.state is AuthAuthenticated;
-          final location = state.matchedLocation;
+    initialLocation: Routes.auth,
+    refreshListenable: GoRouterRefreshStream(authCubit.stream),
+    redirect: (context, state) {
+      final isAuthenticated = authCubit.state is AuthAuthenticated;
+      final location = state.matchedLocation;
 
-          if (!isAuthenticated && location != Routes.auth) return Routes.auth;
-          if (isAuthenticated && location == Routes.auth) return Routes.home;
-          return null;
+      if (!isAuthenticated && location != Routes.auth) return Routes.auth;
+      if (isAuthenticated && location == Routes.auth) return Routes.home;
+      return null;
+    },
+    routes: [
+      GoRoute(path: Routes.auth, builder: (_, s) => const AuthScreen()),
+      GoRoute(path: Routes.home, builder: (_, s) => const HomeScreen()),
+      GoRoute(
+        path: Routes.chat,
+        builder: (context, state) {
+          final peerPubkey = state.pathParameters['peerPubkey']!;
+          return BlocProvider(
+            create: (_) => getIt<ChatBloc>(),
+            child: ChatScreen(peerPubkey: peerPubkey),
+          );
         },
-        routes: [
-          GoRoute(
-            path: Routes.auth,
-            builder: (_, s) => const AuthScreen(),
-          ),
-          GoRoute(
-            path: Routes.home,
-            builder: (_, s) => const HomeScreen(),
-          ),
-          GoRoute(
-            path: Routes.chat,
-            builder: (context, state) {
-              final peerPubkey = state.pathParameters['peerPubkey']!;
-              return BlocProvider(
-                create: (_) => getIt<ChatBloc>(),
-                child: ChatScreen(peerPubkey: peerPubkey),
-              );
-            },
-          ),
-        ],
-      );
+      ),
+    ],
+  );
 }
 
 abstract final class Routes {

@@ -18,10 +18,7 @@ class PeerDiscoveryService {
 
   Stream<PeerHint> get discovered => _discoveredController.stream;
 
-  PeerDiscoveryService(
-    this._client,
-    @Named('apiBaseUrl') this._baseUrl,
-  );
+  PeerDiscoveryService(this._client, @Named('apiBaseUrl') this._baseUrl);
 
   Future<void> announceLan({
     required String ip,

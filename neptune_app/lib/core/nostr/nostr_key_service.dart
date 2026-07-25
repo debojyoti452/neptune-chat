@@ -14,14 +14,12 @@ abstract final class NostrKeyService {
   static final ECDomainParameters _curve = ECCurve_secp256k1();
 
   static ({String privkey, String pubkey}) generateKeyPair() {
-    final secureRandom = FortunaRandom()
-      ..seed(KeyParameter(_randomBytes(32)));
+    final secureRandom = FortunaRandom()..seed(KeyParameter(_randomBytes(32)));
 
     final generator = ECKeyGenerator()
-      ..init(ParametersWithRandom(
-        ECKeyGeneratorParameters(_curve),
-        secureRandom,
-      ));
+      ..init(
+        ParametersWithRandom(ECKeyGeneratorParameters(_curve), secureRandom),
+      );
 
     final pair = generator.generateKeyPair();
     final priv = pair.privateKey;
@@ -63,7 +61,10 @@ abstract final class NostrKeyService {
   static Uint8List _bigIntToBytes(BigInt value, int length) {
     final hex = value.toRadixString(16).padLeft(length * 2, '0');
     return Uint8List.fromList(
-      List.generate(length, (i) => int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16)),
+      List.generate(
+        length,
+        (i) => int.parse(hex.substring(i * 2, i * 2 + 2), radix: 16),
+      ),
     );
   }
 

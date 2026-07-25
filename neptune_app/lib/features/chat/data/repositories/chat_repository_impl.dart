@@ -76,13 +76,15 @@ class ChatRepositoryImpl implements ChatRepository {
       _sessions[session.id] = (session, convKey);
       _incomingControllers[session.id] = StreamController<Message>.broadcast();
 
-      await _sessionDatasource.saveSession(ChatSessionModel(
-        id: session.id,
-        peerPubkey: peerPubkey,
-        conversationKeyHex: hex.encode(convKey),
-        transport: session.transport.name,
-        startedAt: session.startedAt.millisecondsSinceEpoch,
-      ));
+      await _sessionDatasource.saveSession(
+        ChatSessionModel(
+          id: session.id,
+          peerPubkey: peerPubkey,
+          conversationKeyHex: hex.encode(convKey),
+          transport: session.transport.name,
+          startedAt: session.startedAt.millisecondsSinceEpoch,
+        ),
+      );
 
       _ensureRelaySubscription(myPubkey).ignore();
       _announceLan().ignore();
@@ -93,7 +95,10 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
-  Future<Either<Failure, Unit>> sendMessage(String sessionId, String content) async {
+  Future<Either<Failure, Unit>> sendMessage(
+    String sessionId,
+    String content,
+  ) async {
     try {
       final cached = _sessions[sessionId];
       if (cached == null) {
@@ -116,7 +121,7 @@ class ChatRepositoryImpl implements ChatRepository {
         kind: 20001,
         content: ciphertext,
         tags: [
-          ['p', session.peerPubkey]
+          ['p', session.peerPubkey],
         ],
         createdAt: now,
       );
@@ -124,19 +129,23 @@ class ChatRepositoryImpl implements ChatRepository {
       await _ensureRelaySubscription(myPubkey).onError((e, st) {
         debugPrint('[Neptune] relay: subscription failed: $e');
       });
-      debugPrint('[Neptune] relay: sending event ${event.id.substring(0, 8)}... state=${_relay.state}');
+      debugPrint(
+        '[Neptune] relay: sending event ${event.id.substring(0, 8)}... state=${_relay.state}',
+      );
       await _router.send(event, toPubkey: session.peerPubkey);
 
-      await _localDatasource.saveMessage(MessageModel(
-        id: event.id,
-        sessionId: sessionId,
-        peerPubkey: session.peerPubkey,
-        ciphertext: ciphertext,
-        nonce: '',
-        direction: 'sent',
-        transport: session.transport.name,
-        sentAt: event.createdAt * 1000,
-      ));
+      await _localDatasource.saveMessage(
+        MessageModel(
+          id: event.id,
+          sessionId: sessionId,
+          peerPubkey: session.peerPubkey,
+          ciphertext: ciphertext,
+          nonce: '',
+          direction: 'sent',
+          transport: session.transport.name,
+          sentAt: event.createdAt * 1000,
+        ),
+      );
 
       return const Right(unit);
     } catch (e) {
@@ -157,7 +166,10 @@ class ChatRepositoryImpl implements ChatRepository {
       final messages = <Message>[];
       for (final model in models) {
         try {
-          final plaintext = await Nip44Cipher.decrypt(model.ciphertext, convKey);
+          final plaintext = await Nip44Cipher.decrypt(
+            model.ciphertext,
+            convKey,
+          );
           messages.add(model.toEntity(plaintext));
         } catch (_) {}
       }
@@ -194,7 +206,8 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   Future<void> _ensureRelaySubscription(String myPubkey) async {
-    final needsSubscribe = !_relaySubscribed || _relay.state == RelayClientState.disconnected;
+    final needsSubscribe =
+        !_relaySubscribed || _relay.state == RelayClientState.disconnected;
     debugPrint('[Neptune] relay: connect() state=${_relay.state}');
     await _relay.connect();
     debugPrint('[Neptune] relay: connected, needsSubscribe=$needsSubscribe');
@@ -206,7 +219,9 @@ class ChatRepositoryImpl implements ChatRepository {
           'since': DateTime.now().millisecondsSinceEpoch ~/ 1000,
         },
       ]);
-      debugPrint('[Neptune] relay: subscribed for #p:${myPubkey.substring(0, 8)}...');
+      debugPrint(
+        '[Neptune] relay: subscribed for #p:${myPubkey.substring(0, 8)}...',
+      );
       if (!_relaySubscribed) {
         _relaySub = _relay.events.listen(_onRelayEvent);
         _relaySubscribed = true;
@@ -215,7 +230,9 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   void _onRelayEvent(NostrEvent event) {
-    debugPrint('[Neptune] relay: EVENT from ${event.pubkey.substring(0, 8)}... kind=${event.kind}');
+    debugPrint(
+      '[Neptune] relay: EVENT from ${event.pubkey.substring(0, 8)}... kind=${event.kind}',
+    );
     for (final entry in _sessions.entries) {
       if (entry.value.$1.peerPubkey == event.pubkey) {
         _handleIncomingEvent(entry.key, entry.value.$1, entry.value.$2, event);
@@ -245,26 +262,30 @@ class ChatRepositoryImpl implements ChatRepository {
     try {
       final plaintext = await Nip44Cipher.decrypt(event.content, convKey);
 
-      await _localDatasource.saveMessage(MessageModel(
-        id: event.id,
-        sessionId: sessionId,
-        peerPubkey: event.pubkey,
-        ciphertext: event.content,
-        nonce: '',
-        direction: 'received',
-        transport: session.transport.name,
-        sentAt: event.createdAt * 1000,
-      ));
+      await _localDatasource.saveMessage(
+        MessageModel(
+          id: event.id,
+          sessionId: sessionId,
+          peerPubkey: event.pubkey,
+          ciphertext: event.content,
+          nonce: '',
+          direction: 'received',
+          transport: session.transport.name,
+          sentAt: event.createdAt * 1000,
+        ),
+      );
 
-      _incomingControllers[sessionId]?.add(Message(
-        id: event.id,
-        sessionId: sessionId,
-        peerPubkey: event.pubkey,
-        content: plaintext,
-        direction: MessageDirection.received,
-        transport: session.transport,
-        sentAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
-      ));
+      _incomingControllers[sessionId]?.add(
+        Message(
+          id: event.id,
+          sessionId: sessionId,
+          peerPubkey: event.pubkey,
+          content: plaintext,
+          direction: MessageDirection.received,
+          transport: session.transport,
+          sentAt: DateTime.fromMillisecondsSinceEpoch(event.createdAt * 1000),
+        ),
+      );
     } catch (_) {}
   }
 }

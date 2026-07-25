@@ -12,20 +12,17 @@ class AuthCubit extends Cubit<AuthState> {
   final RegisterIdentity _registerIdentity;
 
   AuthCubit(this._loadIdentity, this._registerIdentity)
-      : super(const AuthState.initial());
+    : super(const AuthState.initial());
 
   Future<void> initialize() async {
     emit(const AuthState.loading());
 
     final result = await _loadIdentity();
 
-    result.fold(
-      (_) => _createNewIdentity(),
-      (identity) {
-        debugPrint('[Neptune] identity pubkey: ${identity.pubkey}');
-        emit(AuthState.authenticated(identity: identity));
-      },
-    );
+    result.fold((_) => _createNewIdentity(), (identity) {
+      debugPrint('[Neptune] identity pubkey: ${identity.pubkey}');
+      emit(AuthState.authenticated(identity: identity));
+    });
   }
 
   Future<void> _createNewIdentity() async {
