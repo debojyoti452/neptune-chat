@@ -1,0 +1,23 @@
+defmodule NeptuneBackendWeb.Plugs.AuthPlug do
+  import Plug.Conn
+  import Phoenix.Controller, only: [json: 2]
+
+  alias NeptuneBackend.Auth
+  alias NeptuneBackend.Accounts
+
+  def init(opts), do: opts
+
+  def call(conn, _opts) do
+    with ["Bearer " <> token] <- get_req_header(conn, "authorization"),
+         {:ok, user_id} <- Auth.verify_token(token),
+         {:ok, user} <- Accounts.get_user(user_id) do
+      assign(conn, :current_user, user)
+    else
+      _ ->
+        conn
+        |> put_status(:unauthorized)
+        |> json(%{error: "unauthorized"})
+        |> halt()
+    end
+  end
+end

@@ -1,0 +1,23 @@
+# Dart/Flutter
+neptune_app/.dart_tool/
+neptune_app/build/
+neptune_app/.flutter-plugins
+neptune_app/.flutter-plugins-dependencies
+neptune_app/dart_define.json
+
+# Elixir/Phoenix
+neptune_backend/_build/
+neptune_backend/deps/
+neptune_backend/priv/*.db
+neptune_backend/priv/*.db-shm
+neptune_backend/priv/*.db-wal
+neptune_backend/.elixir_ls/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# OS
+.DS_Store
+Thumbs.db
