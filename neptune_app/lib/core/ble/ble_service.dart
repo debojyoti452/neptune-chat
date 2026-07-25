@@ -47,12 +47,15 @@ class BleService {
   }
 
   Future<bool> send(NostrEvent event, {required String toPubkey}) async {
+    String? connectedDeviceId;
     try {
       final hashPrefix = _pubkeyHashPrefix(toPubkey);
       final deviceId = await _scanForPeer(hashPrefix);
       if (deviceId == null) return false;
 
       await _channel.connect(deviceId);
+      connectedDeviceId = deviceId;
+
       final mtu = await _channel.requestMtu(deviceId, 512);
 
       final json = jsonEncode(event.toJson());
@@ -64,9 +67,15 @@ class BleService {
       debugPrint('[Neptune] BLE: sent event ${event.id.substring(0, 8)}...');
 
       await _channel.disconnect(deviceId);
+      connectedDeviceId = null;
       return true;
     } catch (e) {
       debugPrint('[Neptune] BLE: send failed ($e)');
+      if (connectedDeviceId != null) {
+        try {
+          await _channel.disconnect(connectedDeviceId);
+        } catch (_) {}
+      }
       return false;
     }
   }
@@ -83,6 +92,7 @@ class BleService {
       if (_prefixMatches(bytes, hashPrefix)) {
         scanSub?.cancel();
         if (!completer.isCompleted) {
+          _channel.stopScan().ignore();
           completer.complete(evt['deviceId'] as String);
         }
       }
@@ -92,13 +102,20 @@ class BleService {
 
     Timer(bleScanTimeout, () {
       scanSub?.cancel();
-      if (!completer.isCompleted) completer.complete(null);
+      if (!completer.isCompleted) {
+        _channel.stopScan().ignore();
+        completer.complete(null);
+      }
     });
 
     return completer.future;
   }
 
   void _handleEvent(Map<String, dynamic> evt) {
+    if (evt['type'] == 'disconnected') {
+      _decoders.remove(evt['deviceId'] as String);
+      return;
+    }
     if (evt['type'] != 'writeReceived') return;
     final deviceId = evt['deviceId'] as String;
     final data = Uint8List.fromList(List<int>.from(evt['data'] as List));

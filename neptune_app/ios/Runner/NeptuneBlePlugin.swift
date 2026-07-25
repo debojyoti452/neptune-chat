@@ -225,6 +225,14 @@ extension NeptuneBlePlugin: CBPeripheralManagerDelegate {
 
     func peripheralManager(
         _ peripheral: CBPeripheralManager,
+        central: CBCentral,
+        didUnsubscribeFrom characteristic: CBCharacteristic
+    ) {
+        emit(["type": "disconnected", "deviceId": central.identifier.uuidString])
+    }
+
+    func peripheralManager(
+        _ peripheral: CBPeripheralManager,
         didReceiveWrite requests: [CBATTRequest]
     ) {
         for req in requests {

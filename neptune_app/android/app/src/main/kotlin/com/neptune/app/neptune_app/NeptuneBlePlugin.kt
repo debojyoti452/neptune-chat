@@ -139,6 +139,12 @@ class NeptuneBlePlugin(private val activity: Activity) :
         service.addCharacteristic(notifyChar)
 
         gattServer = bluetoothManager.openGattServer(activity, object : BluetoothGattServerCallback() {
+            override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
+                if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                    emit(mapOf("type" to "disconnected", "deviceId" to device.address))
+                }
+            }
+
             override fun onCharacteristicWriteRequest(
                 device: BluetoothDevice,
                 requestId: Int,
