@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'ble_constants.dart';
+
 class BleMessageCodec {
   static List<Uint8List> encode(String json, int mtu) {
     final payload = utf8.encode(json);
@@ -36,18 +38,30 @@ class BleMessageDecoder {
     if (_expectedLength < 0 && accumulated.length >= 4) {
       final view = ByteData.sublistView(accumulated, 0, 4);
       _expectedLength = view.getUint32(0, Endian.big);
+      if (_expectedLength > kBleMaxMessageBytes) {
+        _hardReset();
+        throw FormatException('BLE frame exceeds max size: $_expectedLength');
+      }
     }
 
     if (_expectedLength >= 0 && accumulated.length >= 4 + _expectedLength) {
       final jsonBytes = accumulated.sublist(4, 4 + _expectedLength);
-      _reset();
+      final remainder = accumulated.sublist(4 + _expectedLength);
+      _hardReset();
+      if (remainder.isNotEmpty) {
+        _buffer.add(remainder);
+      }
       return utf8.decode(jsonBytes);
     }
 
     return null;
   }
 
-  void _reset() {
+  void reset() {
+    _hardReset();
+  }
+
+  void _hardReset() {
     _buffer.clear();
     _expectedLength = -1;
   }

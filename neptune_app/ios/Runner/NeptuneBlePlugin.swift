@@ -35,7 +35,7 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
     private var discoveredPeripherals = [String: CBPeripheral]()
     private var connectedPeripherals = [String: CBPeripheral]()
     private var connectResults = [String: FlutterResult]()
-    private var mtuResults = [String: FlutterResult]()
+    private var writeResults = [String: FlutterResult]()
 
     private var serviceDataToAdvertise: Data?
     private var pendingScanServiceUuid: CBUUID?
@@ -93,7 +93,7 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
         case "requestMtu":
             let deviceId = args?["deviceId"] as! String
             if let p = connectedPeripherals[deviceId] {
-                result(p.maximumWriteValueLength(for: .withoutResponse))
+                result(p.maximumWriteValueLength(for: .withResponse))
             } else {
                 result(FlutterError(code: "NO_DEVICE", message: "Not connected", details: nil))
             }
@@ -110,6 +110,7 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
                 centralManager?.cancelPeripheralConnection(p)
             }
             connectedPeripherals.removeValue(forKey: deviceId)
+            discoveredPeripherals.removeValue(forKey: deviceId)
             result(nil)
 
         default:
@@ -128,7 +129,7 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
 
         writeChar = CBMutableCharacteristic(
             type: writeCharUuid,
-            properties: [.writeWithoutResponse],
+            properties: [.write],
             value: nil,
             permissions: [.writeable]
         )
@@ -188,8 +189,8 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
             result(FlutterError(code: "NO_CHAR", message: "Characteristic not found", details: nil))
             return
         }
-        peripheral.writeValue(data, for: char, type: .withoutResponse)
-        result(nil)
+        writeResults[deviceId] = result
+        peripheral.writeValue(data, for: char, type: .withResponse)
     }
 }
 
@@ -237,6 +238,7 @@ extension NeptuneBlePlugin: CBPeripheralManagerDelegate {
     ) {
         for req in requests {
             guard let data = req.value else { continue }
+            peripheral.respond(to: req, withResult: .success)
             emit([
                 "type": "writeReceived",
                 "deviceId": req.central.identifier.uuidString,
@@ -336,5 +338,13 @@ extension NeptuneBlePlugin: CBPeripheralDelegate {
         _ peripheral: CBPeripheral,
         didWriteValueFor characteristic: CBCharacteristic,
         error: Error?
-    ) {}
+    ) {
+        let deviceId = peripheral.identifier.uuidString
+        let pending = writeResults.removeValue(forKey: deviceId)
+        if let error = error {
+            pending?(FlutterError(code: "WRITE_FAILED", message: error.localizedDescription, details: nil))
+        } else {
+            pending?(nil)
+        }
+    }
 }

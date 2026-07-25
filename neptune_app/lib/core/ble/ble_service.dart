@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
+import 'package:pointycastle/digests/sha256.dart';
 
 import '../nostr/nostr_event.dart';
 import 'ble_channel.dart';
@@ -19,19 +20,22 @@ class BleService {
 
   InboundEventHandler? onEvent;
 
+  bool _isStarted = false;
   StreamSubscription<Map<String, dynamic>>? _eventSub;
   final _decoders = <String, BleMessageDecoder>{};
 
   Future<void> start(String myPubkey) async {
+    if (_isStarted) return;
     await _channel.startServer();
     final prefix = _pubkeyHashPrefix(myPubkey);
     await _channel.startAdvertising(prefix);
-
     _eventSub = _channel.eventStream.listen(_handleEvent);
+    _isStarted = true;
     debugPrint('[Neptune] BLE: started');
   }
 
   Future<void> stop() async {
+    _isStarted = false;
     await _eventSub?.cancel();
     _eventSub = null;
     _decoders.clear();
@@ -120,26 +124,29 @@ class BleService {
     final deviceId = evt['deviceId'] as String;
     final data = Uint8List.fromList(List<int>.from(evt['data'] as List));
     final decoder = _decoders[deviceId] ??= BleMessageDecoder();
-    final json = decoder.addChunk(data);
-    if (json != null) {
-      try {
+    try {
+      final json = decoder.addChunk(data);
+      if (json != null) {
         final event = NostrEvent.fromJson(
           Map<String, dynamic>.from(jsonDecode(json) as Map),
         );
         onEvent?.call(event);
-      } catch (e) {
-        debugPrint('[Neptune] BLE: failed to parse incoming event ($e)');
       }
+    } on FormatException catch (e) {
+      debugPrint('[Neptune] BLE: dropping oversized frame from $deviceId ($e)');
+      _decoders.remove(deviceId);
+    } catch (e) {
+      debugPrint('[Neptune] BLE: failed to parse incoming event ($e)');
     }
   }
 
   Uint8List _pubkeyHashPrefix(String pubkey) {
-    final hexPrefix = pubkey.substring(0, blePublickeyHashLength * 2);
-    final result = Uint8List(blePublickeyHashLength);
-    for (var i = 0; i < blePublickeyHashLength; i++) {
-      result[i] = int.parse(hexPrefix.substring(i * 2, i * 2 + 2), radix: 16);
+    final bytes = Uint8List(pubkey.length ~/ 2);
+    for (var i = 0; i < bytes.length; i++) {
+      bytes[i] = int.parse(pubkey.substring(i * 2, i * 2 + 2), radix: 16);
     }
-    return result;
+    final hash = SHA256Digest().process(bytes);
+    return hash.sublist(0, blePubkeyPrefixLength);
   }
 
   bool _prefixMatches(Uint8List data, Uint8List prefix) {

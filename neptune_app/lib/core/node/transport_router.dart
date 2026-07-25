@@ -52,8 +52,13 @@ class TransportRouter {
     final channel = WebSocketChannel.connect(
       Uri.parse('ws://${hint.ip}:${hint.port}'),
     );
-    await channel.ready;
-    channel.sink.add(jsonEncode(['EVENT', event.toJson()]));
-    await channel.sink.close();
+    try {
+      await channel.ready;
+      channel.sink.add(jsonEncode(['EVENT', event.toJson()]));
+      await channel.sink.close();
+    } catch (e) {
+      channel.sink.close().ignore();
+      rethrow;
+    }
   }
 }

@@ -1,13 +1,16 @@
 package com.neptune.app.neptune_app
 
+import android.Manifest
 import android.app.Activity
 import android.bluetooth.*
 import android.bluetooth.le.*
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.os.ParcelUuid
+import androidx.core.content.ContextCompat
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
@@ -39,7 +42,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
     private var eventSink: EventChannel.EventSink? = null
 
     private val bluetoothManager by lazy {
-        activity.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+        activity.applicationContext.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     }
     private val bluetoothAdapter get() = bluetoothManager.adapter
 
@@ -50,6 +53,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
     private val gattClients = mutableMapOf<String, BluetoothGatt>()
     private val connectResults = mutableMapOf<String, MethodChannel.Result>()
     private val mtuResults = mutableMapOf<String, (Int) -> Unit>()
+    private val writeResults = mutableMapOf<String, MethodChannel.Result>()
 
     override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
         eventSink = sink
@@ -63,9 +67,42 @@ class NeptuneBlePlugin(private val activity: Activity) :
         mainHandler.post { eventSink?.success(event) }
     }
 
+    private fun hasPermission(vararg permissions: String): Boolean {
+        return permissions.all {
+            ContextCompat.checkSelfPermission(activity, it) == PackageManager.PERMISSION_GRANTED
+        }
+    }
+
+    private fun requiresPermission(result: MethodChannel.Result, vararg permissions: String): Boolean {
+        if (!hasPermission(*permissions)) {
+            result.error("PERMISSION_DENIED", "Missing permissions: ${permissions.joinToString()}", null)
+            return true
+        }
+        return false
+    }
+
+    private val connectPermissions get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(Manifest.permission.BLUETOOTH_CONNECT)
+    } else {
+        arrayOf(Manifest.permission.BLUETOOTH)
+    }
+
+    private val scanPermissions get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(Manifest.permission.BLUETOOTH_SCAN)
+    } else {
+        arrayOf(Manifest.permission.BLUETOOTH)
+    }
+
+    private val advertisePermissions get() = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        arrayOf(Manifest.permission.BLUETOOTH_ADVERTISE)
+    } else {
+        arrayOf(Manifest.permission.BLUETOOTH_ADMIN)
+    }
+
     override fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
             "startServer" -> {
+                if (requiresPermission(result, *connectPermissions)) return
                 val serviceUuid = UUID.fromString(call.argument<String>("serviceUuid")!!)
                 val writeCharUuid = UUID.fromString(call.argument<String>("writeCharUuid")!!)
                 val notifyCharUuid = UUID.fromString(call.argument<String>("notifyCharUuid")!!)
@@ -73,40 +110,47 @@ class NeptuneBlePlugin(private val activity: Activity) :
                 result.success(null)
             }
             "startAdvertising" -> {
+                if (requiresPermission(result, *advertisePermissions)) return
                 val serviceUuid = UUID.fromString(call.argument<String>("serviceUuid")!!)
                 val serviceData = call.argument<List<Int>>("serviceData")!!.map { it.toByte() }.toByteArray()
                 startAdvertising(serviceUuid, serviceData)
                 result.success(null)
             }
             "stopAdvertising" -> {
+                if (requiresPermission(result, *advertisePermissions)) return
                 advertiser?.stopAdvertising(advertiseCallback)
                 result.success(null)
             }
             "stopServer" -> {
-                gattServer?.close()
-                gattServer = null
+                if (requiresPermission(result, *connectPermissions)) return
+                stopServer()
                 result.success(null)
             }
             "startScan" -> {
+                if (requiresPermission(result, *scanPermissions)) return
                 val serviceUuid = UUID.fromString(call.argument<String>("serviceUuid")!!)
                 startScan(serviceUuid)
                 result.success(null)
             }
             "stopScan" -> {
+                if (requiresPermission(result, *scanPermissions)) return
                 scanCallback?.let { scanner?.stopScan(it) }
                 scanCallback = null
                 result.success(null)
             }
             "connect" -> {
+                if (requiresPermission(result, *connectPermissions)) return
                 val deviceId = call.argument<String>("deviceId")!!
                 connectDevice(deviceId, result)
             }
             "requestMtu" -> {
+                if (requiresPermission(result, *connectPermissions)) return
                 val deviceId = call.argument<String>("deviceId")!!
                 val mtu = call.argument<Int>("mtu")!!
                 requestMtu(deviceId, mtu, result)
             }
             "writeChar" -> {
+                if (requiresPermission(result, *connectPermissions)) return
                 val deviceId = call.argument<String>("deviceId")!!
                 val serviceUuid = UUID.fromString(call.argument<String>("serviceUuid")!!)
                 val charUuid = UUID.fromString(call.argument<String>("charUuid")!!)
@@ -114,6 +158,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
                 writeChar(deviceId, serviceUuid, charUuid, data, result)
             }
             "disconnect" -> {
+                if (requiresPermission(result, *connectPermissions)) return
                 val deviceId = call.argument<String>("deviceId")!!
                 gattClients[deviceId]?.disconnect()
                 gattClients.remove(deviceId)
@@ -126,7 +171,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
     private fun startServer(serviceUuid: UUID, writeCharUuid: UUID, notifyCharUuid: UUID) {
         val writeChar = BluetoothGattCharacteristic(
             writeCharUuid,
-            BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE,
+            BluetoothGattCharacteristic.PROPERTY_WRITE,
             BluetoothGattCharacteristic.PERMISSION_WRITE
         )
         val notifyChar = BluetoothGattCharacteristic(
@@ -138,7 +183,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
         service.addCharacteristic(writeChar)
         service.addCharacteristic(notifyChar)
 
-        gattServer = bluetoothManager.openGattServer(activity, object : BluetoothGattServerCallback() {
+        gattServer = bluetoothManager.openGattServer(activity.applicationContext, object : BluetoothGattServerCallback() {
             override fun onConnectionStateChange(device: BluetoothDevice, status: Int, newState: Int) {
                 if (newState == BluetoothProfile.STATE_DISCONNECTED) {
                     emit(mapOf("type" to "disconnected", "deviceId" to device.address))
@@ -165,6 +210,16 @@ class NeptuneBlePlugin(private val activity: Activity) :
             }
         })
         gattServer?.addService(service)
+    }
+
+    private fun stopServer() {
+        gattClients.values.forEach { gatt ->
+            gatt.disconnect()
+            gatt.close()
+        }
+        gattClients.clear()
+        gattServer?.close()
+        gattServer = null
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {
@@ -211,7 +266,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
     private fun connectDevice(deviceId: String, result: MethodChannel.Result) {
         val device = bluetoothAdapter.getRemoteDevice(deviceId)
         connectResults[deviceId] = result
-        val gatt = device.connectGatt(activity, false, object : BluetoothGattCallback() {
+        val gatt = device.connectGatt(activity.applicationContext, false, object : BluetoothGattCallback() {
             override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> gatt.discoverServices()
@@ -241,6 +296,21 @@ class NeptuneBlePlugin(private val activity: Activity) :
             override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
                 mtuResults.remove(deviceId)?.invoke(mtu)
                 emit(mapOf("type" to "mtu", "deviceId" to deviceId, "mtu" to mtu))
+            }
+
+            override fun onCharacteristicWrite(
+                gatt: BluetoothGatt,
+                characteristic: BluetoothGattCharacteristic,
+                status: Int
+            ) {
+                val pending = writeResults.remove(deviceId)
+                mainHandler.post {
+                    if (status == BluetoothGatt.GATT_SUCCESS) {
+                        pending?.success(null)
+                    } else {
+                        pending?.error("WRITE_FAILED", "Write failed (status=$status)", null)
+                    }
+                }
             }
         })
         gattClients[deviceId] = gatt
@@ -273,14 +343,16 @@ class NeptuneBlePlugin(private val activity: Activity) :
             result.error("NO_CHAR", "Characteristic not found", null)
             return
         }
+        writeResults[deviceId] = result
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            gatt.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE)
+            gatt.writeCharacteristic(char, data, BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT)
         } else {
+            @Suppress("DEPRECATION")
+            char.writeType = BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             @Suppress("DEPRECATION")
             char.value = data
             @Suppress("DEPRECATION")
             gatt.writeCharacteristic(char)
         }
-        result.success(null)
     }
 }
