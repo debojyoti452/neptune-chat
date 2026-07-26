@@ -45,6 +45,15 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
         super.init()
     }
 
+    private func argToData(_ arg: Any?) -> Data {
+        if let typed = arg as? FlutterStandardTypedData {
+            return typed.data
+        } else if let ints = arg as? [Int] {
+            return Data(ints.map { UInt8($0) })
+        }
+        return Data()
+    }
+
     private func emit(_ event: [String: Any]) {
         DispatchQueue.main.async {
             self.eventSink?(event)
@@ -63,7 +72,7 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
 
         case "startAdvertising":
             let svcUuid = CBUUID(string: args?["serviceUuid"] as! String)
-            let serviceData = Data((args?["serviceData"] as! [Int]).map { UInt8($0) })
+            let serviceData = argToData(args?["serviceData"])
             serviceDataToAdvertise = serviceData
             startAdvertising(serviceUuid: svcUuid, serviceData: serviceData)
             result(nil)
@@ -101,7 +110,7 @@ class NeptuneBlePlugin: NSObject, FlutterPlugin {
         case "writeChar":
             let deviceId = args?["deviceId"] as! String
             let charUuid = CBUUID(string: args?["charUuid"] as! String)
-            let data = Data((args?["data"] as! [Int]).map { UInt8($0) })
+            let data = argToData(args?["data"])
             writeToPeripheral(deviceId: deviceId, charUuid: charUuid, data: data, result: result)
 
         case "disconnect":

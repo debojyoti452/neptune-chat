@@ -276,13 +276,28 @@ flowchart TD
     GEN_KEY --> OPEN_DB
     OPEN_DB --> READ_ID[flutter_secure_storage\nread identity_private_key]
     READ_ID -- found --> START_SERVER[Start InboundServer\nshelf on random port]
-    READ_ID -- not found --> GEN_ID[Generate secp256k1 keypair\nstore privkey in Keychain/Keystore]
-    GEN_ID --> START_SERVER
+    READ_ID -- not found --> GEN_ID[Generate secp256k1 keypair locally\nstore privkey in Keychain/Keystore]
+    GEN_ID --> REG[POST /api/v1/auth/register\nBACKEND REQUIRED - one time only\nreceive bearer token]
+    REG --> SAVE_TOKEN[Save bearer token\nflutter_secure_storage]
+    SAVE_TOKEN --> START_SERVER
     START_SERVER --> MDNS[Advertise mDNS\n_neptune._tcp.local]
     MDNS --> BLE[Start BLE advertising + scanning]
     BLE --> CONNECT[Connect to Phoenix backend\nif internet available]
     CONNECT --> READY[Node ready]
 ```
+
+**Backend dependency summary:**
+
+| Scenario | Backend required? |
+|----------|------------------|
+| First install / clean app data | Yes - `POST /auth/register` to get bearer token |
+| Subsequent launches | No - privkey read locally, pubkey derived on-device |
+| Sending messages (BLE / LAN / peer relay) | No |
+| Sending messages (internet fallback) | Yes |
+| Fetching peer hints | Yes |
+| Announcing own LAN hints | Yes |
+
+The keypair itself is always generated locally (`NostrKeyService.generateKeyPair()`). The backend call is only for issuing an auth token used by the relay and peer-hint endpoints. If the backend is unreachable on first launch, the app will block at registration and the identity will not be created.
 
 ---
 

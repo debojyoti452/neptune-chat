@@ -125,6 +125,8 @@ flutter run \
   --dart-define=NEPTUNE_API_URL=http://localhost:4000
 ```
 
+> **First launch requires the backend.** On a clean install (or after `flutter clean`), the app generates a secp256k1 keypair locally and then calls `POST /api/v1/auth/register` to obtain a bearer token. The backend must be reachable for this step. On every subsequent launch the private key is read from `flutter_secure_storage` and the public key is derived locally - no network call is made. If you wipe app data or reinstall, the backend is required again.
+
 ---
 
 ## API Surface

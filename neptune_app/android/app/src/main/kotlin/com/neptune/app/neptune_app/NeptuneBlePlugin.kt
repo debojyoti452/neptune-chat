@@ -73,6 +73,13 @@ class NeptuneBlePlugin(private val activity: Activity) :
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun argToByteArray(arg: Any?): ByteArray = when (arg) {
+        is ByteArray -> arg
+        is List<*> -> (arg as List<Int>).map { it.toByte() }.toByteArray()
+        else -> throw ClassCastException("Expected byte array, got ${arg?.javaClass}")
+    }
+
     private fun requiresPermission(result: MethodChannel.Result, vararg permissions: String): Boolean {
         if (!hasPermission(*permissions)) {
             result.error("PERMISSION_DENIED", "Missing permissions: ${permissions.joinToString()}", null)
@@ -112,7 +119,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
             "startAdvertising" -> {
                 if (requiresPermission(result, *advertisePermissions)) return
                 val serviceUuid = UUID.fromString(call.argument<String>("serviceUuid")!!)
-                val serviceData = call.argument<List<Int>>("serviceData")!!.map { it.toByte() }.toByteArray()
+                val serviceData = argToByteArray(call.argument<Any>("serviceData"))
                 startAdvertising(serviceUuid, serviceData)
                 result.success(null)
             }
@@ -154,7 +161,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
                 val deviceId = call.argument<String>("deviceId")!!
                 val serviceUuid = UUID.fromString(call.argument<String>("serviceUuid")!!)
                 val charUuid = UUID.fromString(call.argument<String>("charUuid")!!)
-                val data = call.argument<List<Int>>("data")!!.map { it.toByte() }.toByteArray()
+                val data = argToByteArray(call.argument<Any>("data"))
                 writeChar(deviceId, serviceUuid, charUuid, data, result)
             }
             "disconnect" -> {
