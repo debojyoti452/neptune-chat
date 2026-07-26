@@ -52,7 +52,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
     private var scanCallback: ScanCallback? = null
     private val gattClients = mutableMapOf<String, BluetoothGatt>()
     private val connectResults = mutableMapOf<String, MethodChannel.Result>()
-    private val mtuResults = mutableMapOf<String, (Int) -> Unit>()
+    private val mtuResults = mutableMapOf<String, MethodChannel.Result>()
     private val writeResults = mutableMapOf<String, MethodChannel.Result>()
 
     override fun onListen(arguments: Any?, sink: EventChannel.EventSink?) {
@@ -167,8 +167,10 @@ class NeptuneBlePlugin(private val activity: Activity) :
             "disconnect" -> {
                 if (requiresPermission(result, *connectPermissions)) return
                 val deviceId = call.argument<String>("deviceId")!!
-                gattClients[deviceId]?.disconnect()
-                gattClients.remove(deviceId)
+                gattClients.remove(deviceId)?.let { gatt ->
+                    gatt.disconnect()
+                    gatt.close()
+                }
                 result.success(null)
             }
             else -> result.notImplemented()
@@ -230,6 +232,10 @@ class NeptuneBlePlugin(private val activity: Activity) :
     }
 
     private val advertiseCallback = object : AdvertiseCallback() {
+        override fun onStartSuccess(settingsInEffect: AdvertiseSettings?) {
+            emit(mapOf("type" to "advertiseStarted"))
+        }
+
         override fun onStartFailure(errorCode: Int) {
             emit(mapOf("type" to "error", "message" to "advertise failed: $errorCode"))
         }
@@ -241,11 +247,13 @@ class NeptuneBlePlugin(private val activity: Activity) :
             .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_LOW_LATENCY)
             .setConnectable(true)
             .build()
-        val data = AdvertiseData.Builder()
+        val advertiseData = AdvertiseData.Builder()
             .addServiceUuid(ParcelUuid(serviceUuid))
+            .build()
+        val scanResponse = AdvertiseData.Builder()
             .addServiceData(ParcelUuid(serviceUuid), serviceData)
             .build()
-        advertiser?.startAdvertising(settings, data, advertiseCallback)
+        advertiser?.startAdvertising(settings, advertiseData, scanResponse, advertiseCallback)
     }
 
     private fun startScan(serviceUuid: UUID) {
@@ -271,6 +279,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
     }
 
     private fun connectDevice(deviceId: String, result: MethodChannel.Result) {
+        gattClients.remove(deviceId)?.close()
         val device = bluetoothAdapter.getRemoteDevice(deviceId)
         connectResults[deviceId] = result
         val gatt = device.connectGatt(activity.applicationContext, false, object : BluetoothGattCallback() {
@@ -278,13 +287,22 @@ class NeptuneBlePlugin(private val activity: Activity) :
                 when (newState) {
                     BluetoothProfile.STATE_CONNECTED -> gatt.discoverServices()
                     BluetoothProfile.STATE_DISCONNECTED -> {
-                        val pending = connectResults.remove(deviceId)
-                        if (pending != null) {
+                        connectResults.remove(deviceId)?.let { pending ->
                             mainHandler.post {
                                 pending.error("CONNECT_FAILED", "Connection failed (status=$status)", null)
                             }
                         }
-                        gattClients.remove(deviceId)
+                        mtuResults.remove(deviceId)?.let { pending ->
+                            mainHandler.post {
+                                pending.error("CONNECT_LOST", "Connection lost during MTU (status=$status)", null)
+                            }
+                        }
+                        writeResults.remove(deviceId)?.let { pending ->
+                            mainHandler.post {
+                                pending.error("CONNECT_LOST", "Connection lost during write (status=$status)", null)
+                            }
+                        }
+                        gattClients.remove(deviceId)?.close()
                     }
                 }
             }
@@ -301,7 +319,9 @@ class NeptuneBlePlugin(private val activity: Activity) :
             }
 
             override fun onMtuChanged(gatt: BluetoothGatt, mtu: Int, status: Int) {
-                mtuResults.remove(deviceId)?.invoke(mtu)
+                mtuResults.remove(deviceId)?.let { pending ->
+                    mainHandler.post { pending.success(mtu) }
+                }
                 emit(mapOf("type" to "mtu", "deviceId" to deviceId, "mtu" to mtu))
             }
 
@@ -329,7 +349,7 @@ class NeptuneBlePlugin(private val activity: Activity) :
             result.error("NO_DEVICE", "Not connected to $deviceId", null)
             return
         }
-        mtuResults[deviceId] = { negotiated -> mainHandler.post { result.success(negotiated) } }
+        mtuResults[deviceId] = result
         gatt.requestMtu(mtu)
     }
 

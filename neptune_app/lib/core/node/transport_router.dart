@@ -25,27 +25,53 @@ class TransportRouter {
   final BleService _ble;
 
   Future<void> send(NostrEvent event, {String? toPubkey}) async {
-    if (toPubkey != null) {
-      final bleSent = await _ble.send(event, toPubkey: toPubkey);
-      if (bleSent) return;
+    if (toPubkey == null) {
+      _internetRelay.sendEvent(event);
+      return;
+    }
 
-      final token = await _keyStorage.getAuthToken();
-      if (token != null) {
-        final hint = await _discovery.fetchLanHint(toPubkey, token);
-        if (hint != null) {
-          try {
-            await _sendViaLan(event, hint);
-            debugPrint('[Neptune] LAN: sent event to ${hint.ip}:${hint.port}');
-            return;
-          } catch (e) {
-            debugPrint(
-              '[Neptune] LAN: send failed ($e), falling back to internet',
-            );
-          }
+    if (_internetRelay.state == RelayClientState.connected) {
+      _internetRelay.sendEvent(event);
+      _tryLocalDelivery(event, toPubkey).ignore();
+      return;
+    }
+
+    final bleSent = await _ble.send(event, toPubkey: toPubkey);
+    if (bleSent) return;
+
+    final token = await _keyStorage.getAuthToken();
+    if (token != null) {
+      final hint = await _discovery.fetchLanHint(toPubkey, token);
+      if (hint != null) {
+        try {
+          await _sendViaLan(event, hint);
+          debugPrint('[Neptune] LAN: sent event to ${hint.ip}:${hint.port}');
+          return;
+        } catch (e) {
+          debugPrint(
+            '[Neptune] LAN: send failed ($e), falling back to internet',
+          );
         }
       }
     }
+
     _internetRelay.sendEvent(event);
+  }
+
+  Future<void> _tryLocalDelivery(NostrEvent event, String toPubkey) async {
+    final bleSent = await _ble.send(event, toPubkey: toPubkey);
+    if (bleSent) return;
+
+    final token = await _keyStorage.getAuthToken();
+    if (token != null) {
+      final hint = await _discovery.fetchLanHint(toPubkey, token);
+      if (hint != null) {
+        try {
+          await _sendViaLan(event, hint);
+          debugPrint('[Neptune] LAN: sent event to ${hint.ip}:${hint.port}');
+        } catch (_) {}
+      }
+    }
   }
 
   Future<void> _sendViaLan(NostrEvent event, PeerHint hint) async {

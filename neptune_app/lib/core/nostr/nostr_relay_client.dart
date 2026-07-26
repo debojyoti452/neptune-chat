@@ -37,16 +37,22 @@ class NostrRelayClient {
   }
 
   Future<void> _doConnect() async {
-    _channel = WebSocketChannel.connect(Uri.parse(url));
-    await _channel!.ready;
-    _state = RelayClientState.connected;
-    _connectFuture = null;
+    try {
+      _channel = WebSocketChannel.connect(Uri.parse(url));
+      await _channel!.ready;
+      _state = RelayClientState.connected;
+      _connectFuture = null;
 
-    _sub = _channel!.stream.listen(
-      _onMessage,
-      onError: (_) => _onDisconnected(),
-      onDone: _onDisconnected,
-    );
+      _sub = _channel!.stream.listen(
+        _onMessage,
+        onError: (_) => _onDisconnected(),
+        onDone: _onDisconnected,
+      );
+    } catch (_) {
+      _state = RelayClientState.disconnected;
+      _connectFuture = null;
+      rethrow;
+    }
   }
 
   void _onDisconnected() {

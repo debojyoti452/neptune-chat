@@ -23,6 +23,7 @@ class BleService {
   InboundEventHandler? onEvent;
 
   bool _isStarted = false;
+  bool _isSending = false;
   StreamSubscription<Map<String, dynamic>>? _eventSub;
   final _decoders = <String, BleMessageDecoder>{};
 
@@ -54,6 +55,8 @@ class BleService {
   }
 
   Future<bool> send(NostrEvent event, {required String toPubkey}) async {
+    if (_isSending) return false;
+    _isSending = true;
     String? connectedDeviceId;
     try {
       final hashPrefix = _pubkeyHashPrefix(toPubkey);
@@ -63,7 +66,9 @@ class BleService {
       await _channel.connect(deviceId);
       connectedDeviceId = deviceId;
 
-      final mtu = await _channel.requestMtu(deviceId, 512);
+      final mtu = await _channel
+          .requestMtu(deviceId, 512)
+          .timeout(const Duration(seconds: 5), onTimeout: () => 512);
 
       final json = jsonEncode(event.toJson());
       final chunks = BleMessageCodec.encode(json, mtu);
@@ -84,6 +89,8 @@ class BleService {
         } catch (_) {}
       }
       return false;
+    } finally {
+      _isSending = false;
     }
   }
 
@@ -119,6 +126,14 @@ class BleService {
   }
 
   void _handleEvent(Map<String, dynamic> evt) {
+    if (evt['type'] == 'error') {
+      debugPrint('[Neptune] BLE: native error: ${evt['message']}');
+      return;
+    }
+    if (evt['type'] == 'advertiseStarted') {
+      debugPrint('[Neptune] BLE: advertising started');
+      return;
+    }
     if (evt['type'] == 'disconnected') {
       _decoders.remove(evt['deviceId'] as String);
       return;

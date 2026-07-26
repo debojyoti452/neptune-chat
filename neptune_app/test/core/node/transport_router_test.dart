@@ -55,6 +55,7 @@ void main() {
       ble: mockBle,
     );
 
+    when(() => mockRelay.state).thenReturn(RelayClientState.disconnected);
     when(() => mockRelay.sendEvent(any())).thenAnswer((_) {});
     when(
       () => mockBle.send(any(), toPubkey: any(named: 'toPubkey')),
