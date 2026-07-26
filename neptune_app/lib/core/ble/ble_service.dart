@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:pointycastle/digests/sha256.dart';
 
 import '../nostr/nostr_event.dart';
@@ -26,6 +28,7 @@ class BleService {
 
   Future<void> start(String myPubkey) async {
     if (_isStarted) return;
+    if (!await _ensureBlePermissions()) return;
     await _channel.startServer();
     final prefix = _pubkeyHashPrefix(myPubkey);
     await _channel.startAdvertising(prefix);
@@ -138,6 +141,27 @@ class BleService {
     } catch (e) {
       debugPrint('[Neptune] BLE: failed to parse incoming event ($e)');
     }
+  }
+
+  Future<bool> _ensureBlePermissions() async {
+    if (!Platform.isAndroid && !Platform.isIOS) return true;
+    final permissions = Platform.isAndroid
+        ? [
+            Permission.bluetoothScan,
+            Permission.bluetoothConnect,
+            Permission.bluetoothAdvertise,
+          ]
+        : [Permission.bluetooth];
+    final results = await permissions.request();
+    final denied = results.values.any(
+      (s) =>
+          s == PermissionStatus.denied ||
+          s == PermissionStatus.permanentlyDenied,
+    );
+    if (denied) {
+      debugPrint('[Neptune] BLE: permissions denied, BLE disabled');
+    }
+    return !denied;
   }
 
   Uint8List _pubkeyHashPrefix(String pubkey) {

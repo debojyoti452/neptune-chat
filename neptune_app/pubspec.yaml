@@ -39,6 +39,8 @@ dependencies:
   shelf: ^1.4.0
   shelf_web_socket: ^3.0.0
 
+  permission_handler: ^11.4.0
+
   multicast_dns: ^0.3.2
   device_info_plus: ^13.2.0
   network_info_plus: ^8.2.1
