@@ -6,6 +6,7 @@ import '../models/chat_session_model.dart';
 abstract interface class ChatSessionDatasource {
   Future<void> saveSession(ChatSessionModel session);
   Future<ChatSessionModel?> getSession(String sessionId);
+  Future<List<ChatSessionModel>> getAllSessions();
   Future<void> deleteSession(String sessionId);
 }
 
@@ -30,6 +31,12 @@ class ChatSessionDatasourceImpl implements ChatSessionDatasource {
     );
     if (rows.isEmpty) return null;
     return ChatSessionModel.fromMap(rows.first);
+  }
+
+  @override
+  Future<List<ChatSessionModel>> getAllSessions() async {
+    final rows = await _db.db.query('sessions', orderBy: 'started_at DESC');
+    return rows.map(ChatSessionModel.fromMap).toList();
   }
 
   @override

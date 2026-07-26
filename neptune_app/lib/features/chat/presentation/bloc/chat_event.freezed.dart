@@ -55,11 +55,12 @@ extension ChatEventPatterns on ChatEvent {
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ChatSessionStarted value)?  sessionStarted,TResult Function( ChatMessageSent value)?  messageSent,TResult Function( ChatMessageReceived value)?  messageReceived,TResult Function( ChatHistoryLoaded value)?  historyLoaded,TResult Function( ChatSessionEnded value)?  sessionEnded,TResult Function( ChatErrorOccurred value)?  errorOccurred,required TResult orElse(),}){
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>({TResult Function( ChatSessionStarted value)?  sessionStarted,TResult Function( ChatSessionRestored value)?  sessionRestored,TResult Function( ChatMessageSent value)?  messageSent,TResult Function( ChatMessageReceived value)?  messageReceived,TResult Function( ChatHistoryLoaded value)?  historyLoaded,TResult Function( ChatSessionEnded value)?  sessionEnded,TResult Function( ChatErrorOccurred value)?  errorOccurred,required TResult orElse(),}){
 final _that = this;
 switch (_that) {
 case ChatSessionStarted() when sessionStarted != null:
-return sessionStarted(_that);case ChatMessageSent() when messageSent != null:
+return sessionStarted(_that);case ChatSessionRestored() when sessionRestored != null:
+return sessionRestored(_that);case ChatMessageSent() when messageSent != null:
 return messageSent(_that);case ChatMessageReceived() when messageReceived != null:
 return messageReceived(_that);case ChatHistoryLoaded() when historyLoaded != null:
 return historyLoaded(_that);case ChatSessionEnded() when sessionEnded != null:
@@ -82,11 +83,12 @@ return errorOccurred(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ChatSessionStarted value)  sessionStarted,required TResult Function( ChatMessageSent value)  messageSent,required TResult Function( ChatMessageReceived value)  messageReceived,required TResult Function( ChatHistoryLoaded value)  historyLoaded,required TResult Function( ChatSessionEnded value)  sessionEnded,required TResult Function( ChatErrorOccurred value)  errorOccurred,}){
+@optionalTypeArgs TResult map<TResult extends Object?>({required TResult Function( ChatSessionStarted value)  sessionStarted,required TResult Function( ChatSessionRestored value)  sessionRestored,required TResult Function( ChatMessageSent value)  messageSent,required TResult Function( ChatMessageReceived value)  messageReceived,required TResult Function( ChatHistoryLoaded value)  historyLoaded,required TResult Function( ChatSessionEnded value)  sessionEnded,required TResult Function( ChatErrorOccurred value)  errorOccurred,}){
 final _that = this;
 switch (_that) {
 case ChatSessionStarted():
-return sessionStarted(_that);case ChatMessageSent():
+return sessionStarted(_that);case ChatSessionRestored():
+return sessionRestored(_that);case ChatMessageSent():
 return messageSent(_that);case ChatMessageReceived():
 return messageReceived(_that);case ChatHistoryLoaded():
 return historyLoaded(_that);case ChatSessionEnded():
@@ -105,11 +107,12 @@ return errorOccurred(_that);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ChatSessionStarted value)?  sessionStarted,TResult? Function( ChatMessageSent value)?  messageSent,TResult? Function( ChatMessageReceived value)?  messageReceived,TResult? Function( ChatHistoryLoaded value)?  historyLoaded,TResult? Function( ChatSessionEnded value)?  sessionEnded,TResult? Function( ChatErrorOccurred value)?  errorOccurred,}){
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>({TResult? Function( ChatSessionStarted value)?  sessionStarted,TResult? Function( ChatSessionRestored value)?  sessionRestored,TResult? Function( ChatMessageSent value)?  messageSent,TResult? Function( ChatMessageReceived value)?  messageReceived,TResult? Function( ChatHistoryLoaded value)?  historyLoaded,TResult? Function( ChatSessionEnded value)?  sessionEnded,TResult? Function( ChatErrorOccurred value)?  errorOccurred,}){
 final _that = this;
 switch (_that) {
 case ChatSessionStarted() when sessionStarted != null:
-return sessionStarted(_that);case ChatMessageSent() when messageSent != null:
+return sessionStarted(_that);case ChatSessionRestored() when sessionRestored != null:
+return sessionRestored(_that);case ChatMessageSent() when messageSent != null:
 return messageSent(_that);case ChatMessageReceived() when messageReceived != null:
 return messageReceived(_that);case ChatHistoryLoaded() when historyLoaded != null:
 return historyLoaded(_that);case ChatSessionEnded() when sessionEnded != null:
@@ -131,10 +134,11 @@ return errorOccurred(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String peerPubkey)?  sessionStarted,TResult Function( String content)?  messageSent,TResult Function( Message message)?  messageReceived,TResult Function( List<Message> messages)?  historyLoaded,TResult Function()?  sessionEnded,TResult Function( String message)?  errorOccurred,required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>({TResult Function( String peerPubkey)?  sessionStarted,TResult Function( String sessionId)?  sessionRestored,TResult Function( String content)?  messageSent,TResult Function( Message message)?  messageReceived,TResult Function( List<Message> messages)?  historyLoaded,TResult Function()?  sessionEnded,TResult Function( String message)?  errorOccurred,required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case ChatSessionStarted() when sessionStarted != null:
-return sessionStarted(_that.peerPubkey);case ChatMessageSent() when messageSent != null:
+return sessionStarted(_that.peerPubkey);case ChatSessionRestored() when sessionRestored != null:
+return sessionRestored(_that.sessionId);case ChatMessageSent() when messageSent != null:
 return messageSent(_that.content);case ChatMessageReceived() when messageReceived != null:
 return messageReceived(_that.message);case ChatHistoryLoaded() when historyLoaded != null:
 return historyLoaded(_that.messages);case ChatSessionEnded() when sessionEnded != null:
@@ -157,10 +161,11 @@ return errorOccurred(_that.message);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String peerPubkey)  sessionStarted,required TResult Function( String content)  messageSent,required TResult Function( Message message)  messageReceived,required TResult Function( List<Message> messages)  historyLoaded,required TResult Function()  sessionEnded,required TResult Function( String message)  errorOccurred,}) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>({required TResult Function( String peerPubkey)  sessionStarted,required TResult Function( String sessionId)  sessionRestored,required TResult Function( String content)  messageSent,required TResult Function( Message message)  messageReceived,required TResult Function( List<Message> messages)  historyLoaded,required TResult Function()  sessionEnded,required TResult Function( String message)  errorOccurred,}) {final _that = this;
 switch (_that) {
 case ChatSessionStarted():
-return sessionStarted(_that.peerPubkey);case ChatMessageSent():
+return sessionStarted(_that.peerPubkey);case ChatSessionRestored():
+return sessionRestored(_that.sessionId);case ChatMessageSent():
 return messageSent(_that.content);case ChatMessageReceived():
 return messageReceived(_that.message);case ChatHistoryLoaded():
 return historyLoaded(_that.messages);case ChatSessionEnded():
@@ -179,10 +184,11 @@ return errorOccurred(_that.message);}
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String peerPubkey)?  sessionStarted,TResult? Function( String content)?  messageSent,TResult? Function( Message message)?  messageReceived,TResult? Function( List<Message> messages)?  historyLoaded,TResult? Function()?  sessionEnded,TResult? Function( String message)?  errorOccurred,}) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>({TResult? Function( String peerPubkey)?  sessionStarted,TResult? Function( String sessionId)?  sessionRestored,TResult? Function( String content)?  messageSent,TResult? Function( Message message)?  messageReceived,TResult? Function( List<Message> messages)?  historyLoaded,TResult? Function()?  sessionEnded,TResult? Function( String message)?  errorOccurred,}) {final _that = this;
 switch (_that) {
 case ChatSessionStarted() when sessionStarted != null:
-return sessionStarted(_that.peerPubkey);case ChatMessageSent() when messageSent != null:
+return sessionStarted(_that.peerPubkey);case ChatSessionRestored() when sessionRestored != null:
+return sessionRestored(_that.sessionId);case ChatMessageSent() when messageSent != null:
 return messageSent(_that.content);case ChatMessageReceived() when messageReceived != null:
 return messageReceived(_that.message);case ChatHistoryLoaded() when historyLoaded != null:
 return historyLoaded(_that.messages);case ChatSessionEnded() when sessionEnded != null:
@@ -254,6 +260,72 @@ class _$ChatSessionStartedCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') $Res call({Object? peerPubkey = null,}) {
   return _then(ChatSessionStarted(
 peerPubkey: null == peerPubkey ? _self.peerPubkey : peerPubkey // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+/// @nodoc
+
+
+class ChatSessionRestored implements ChatEvent {
+  const ChatSessionRestored({required this.sessionId});
+  
+
+ final  String sessionId;
+
+/// Create a copy of ChatEvent
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$ChatSessionRestoredCopyWith<ChatSessionRestored> get copyWith => _$ChatSessionRestoredCopyWithImpl<ChatSessionRestored>(this, _$identity);
+
+
+
+@override
+bool operator ==(Object other) {
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChatSessionRestored&&(identical(other.sessionId, sessionId) || other.sessionId == sessionId));
+}
+
+
+@override
+int get hashCode => Object.hash(runtimeType,sessionId);
+
+@override
+String toString() {
+  return 'ChatEvent.sessionRestored(sessionId: $sessionId)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $ChatSessionRestoredCopyWith<$Res> implements $ChatEventCopyWith<$Res> {
+  factory $ChatSessionRestoredCopyWith(ChatSessionRestored value, $Res Function(ChatSessionRestored) _then) = _$ChatSessionRestoredCopyWithImpl;
+@useResult
+$Res call({
+ String sessionId
+});
+
+
+
+
+}
+/// @nodoc
+class _$ChatSessionRestoredCopyWithImpl<$Res>
+    implements $ChatSessionRestoredCopyWith<$Res> {
+  _$ChatSessionRestoredCopyWithImpl(this._self, this._then);
+
+  final ChatSessionRestored _self;
+  final $Res Function(ChatSessionRestored) _then;
+
+/// Create a copy of ChatEvent
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') $Res call({Object? sessionId = null,}) {
+  return _then(ChatSessionRestored(
+sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
 as String,
   ));
 }

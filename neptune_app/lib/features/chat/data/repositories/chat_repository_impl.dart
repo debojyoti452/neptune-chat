@@ -158,8 +158,70 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<Either<Failure, List<ChatSession>>> getSessions() async {
+    try {
+      final models = await _sessionDatasource.getAllSessions();
+      return Right(models.map((m) => m.toEntity()).toList());
+    } catch (e) {
+      return Left(Failure.storage(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ChatSession>> restoreSession(String sessionId) async {
+    try {
+      if (_sessions.containsKey(sessionId)) {
+        return Right(_sessions[sessionId]!.$1);
+      }
+      final hydrateResult = await _hydrateSession(sessionId);
+      if (hydrateResult == null) {
+        return const Left(Failure.notFound(message: 'Session not found'));
+      }
+      final (session, _) = hydrateResult;
+
+      _incomingControllers[sessionId] ??=
+          StreamController<Message>.broadcast();
+
+      final privkey = await _keyStorage.getIdentityPrivKey();
+      if (privkey != null) {
+        final myPubkey = NostrKeyService.pubkeyFromPrivkey(privkey);
+        _ensureRelaySubscription(myPubkey).ignore();
+        _bleService.start(myPubkey).ignore();
+      }
+
+      return Right(session);
+    } catch (e) {
+      return Left(Failure.network(message: e.toString()));
+    }
+  }
+
+  Future<(ChatSession, Uint8List)?> _hydrateSession(String sessionId) async {
+    final cached = _sessions[sessionId];
+    if (cached != null) return cached;
+
+    final model = await _sessionDatasource.getSession(sessionId);
+    if (model == null) return null;
+
+    final convKey = Uint8List.fromList(
+      List.generate(
+        model.conversationKeyHex.length ~/ 2,
+        (i) => int.parse(
+          model.conversationKeyHex.substring(i * 2, i * 2 + 2),
+          radix: 16,
+        ),
+      ),
+    );
+
+    final session = model.toEntity();
+    _sessions[sessionId] = (session, convKey);
+    return (session, convKey);
+  }
+
+  @override
   Future<Either<Failure, List<Message>>> loadHistory(String sessionId) async {
     try {
+      await _hydrateSession(sessionId);
+
       final cached = _sessions[sessionId];
       if (cached == null) {
         return const Left(Failure.notFound(message: 'Session not found'));
