@@ -57,22 +57,27 @@ void main() {
   });
 
   group('event handling', () {
-    test('calls onEvent with parsed event when a valid 3-element EVENT arrives', () async {
-      await server.start();
-      final completer = Completer<NostrEvent>();
-      server.onEvent = (event) async => completer.complete(event);
+    test(
+      'calls onEvent with parsed event when a valid 3-element EVENT arrives',
+      () async {
+        await server.start();
+        final completer = Completer<NostrEvent>();
+        server.onEvent = (event) async => completer.complete(event);
 
-      final channel = await _connect(server.port!);
-      channel.sink.add(jsonEncode(['EVENT', 'sub-id', _testEvent.toJson()]));
+        final channel = await _connect(server.port!);
+        channel.sink.add(jsonEncode(['EVENT', 'sub-id', _testEvent.toJson()]));
 
-      final received = await completer.future.timeout(const Duration(seconds: 3));
-      await channel.sink.close();
+        final received = await completer.future.timeout(
+          const Duration(seconds: 3),
+        );
+        await channel.sink.close();
 
-      expect(received.id, _testEvent.id);
-      expect(received.pubkey, _testEvent.pubkey);
-      expect(received.content, _testEvent.content);
-      expect(received.kind, _testEvent.kind);
-    });
+        expect(received.id, _testEvent.id);
+        expect(received.pubkey, _testEvent.pubkey);
+        expect(received.content, _testEvent.content);
+        expect(received.kind, _testEvent.kind);
+      },
+    );
 
     test('does not call onEvent for REQ messages', () async {
       await server.start();

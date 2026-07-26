@@ -179,8 +179,7 @@ class ChatRepositoryImpl implements ChatRepository {
       }
       final (session, _) = hydrateResult;
 
-      _incomingControllers[sessionId] ??=
-          StreamController<Message>.broadcast();
+      _incomingControllers[sessionId] ??= StreamController<Message>.broadcast();
 
       final privkey = await _keyStorage.getIdentityPrivKey();
       if (privkey != null) {

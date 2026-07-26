@@ -56,8 +56,9 @@ void main() {
     );
 
     when(() => mockRelay.sendEvent(any())).thenAnswer((_) {});
-    when(() => mockBle.send(any(), toPubkey: any(named: 'toPubkey')))
-        .thenAnswer((_) async => false);
+    when(
+      () => mockBle.send(any(), toPubkey: any(named: 'toPubkey')),
+    ).thenAnswer((_) async => false);
   });
 
   group('send — internet relay fallback', () {
@@ -79,8 +80,9 @@ void main() {
 
     test('sends via internet relay when fetchLanHint returns null', () async {
       when(() => mockKeyStorage.getAuthToken()).thenAnswer((_) async => 'tok');
-      when(() => mockDiscovery.fetchLanHint(any(), any()))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockDiscovery.fetchLanHint(any(), any()),
+      ).thenAnswer((_) async => null);
 
       await router.send(_testEvent, toPubkey: 'peer_pubkey');
 
@@ -113,16 +115,21 @@ void main() {
       await captureServer.close(force: true);
     });
 
-    test('does not fall back to internet relay when LAN hint is available', () async {
-      await router.send(_testEvent, toPubkey: 'peer_pubkey');
+    test(
+      'does not fall back to internet relay when LAN hint is available',
+      () async {
+        await router.send(_testEvent, toPubkey: 'peer_pubkey');
 
-      verifyNever(() => mockRelay.sendEvent(any()));
-    });
+        verifyNever(() => mockRelay.sendEvent(any()));
+      },
+    );
 
     test('sends EVENT frame with correct event id and type', () async {
       await router.send(_testEvent, toPubkey: 'peer_pubkey');
 
-      final raw = await rawFrameCompleter.future.timeout(const Duration(seconds: 3));
+      final raw = await rawFrameCompleter.future.timeout(
+        const Duration(seconds: 3),
+      );
       final frame = jsonDecode(raw) as List<dynamic>;
 
       expect(frame[0], 'EVENT');
@@ -132,18 +139,21 @@ void main() {
       expect(eventMap['content'], _testEvent.content);
     });
 
-    test('falls back to internet relay when LAN WebSocket connection fails', () async {
-      final tmp = await ServerSocket.bind('127.0.0.1', 0);
-      final closedPort = tmp.port;
-      await tmp.close();
+    test(
+      'falls back to internet relay when LAN WebSocket connection fails',
+      () async {
+        final tmp = await ServerSocket.bind('127.0.0.1', 0);
+        final closedPort = tmp.port;
+        await tmp.close();
 
-      when(() => mockDiscovery.fetchLanHint(any(), any())).thenAnswer(
-        (_) async => PeerHint(ip: '127.0.0.1', port: closedPort),
-      );
+        when(
+          () => mockDiscovery.fetchLanHint(any(), any()),
+        ).thenAnswer((_) async => PeerHint(ip: '127.0.0.1', port: closedPort));
 
-      await router.send(_testEvent, toPubkey: 'peer_pubkey');
+        await router.send(_testEvent, toPubkey: 'peer_pubkey');
 
-      verify(() => mockRelay.sendEvent(_testEvent)).called(1);
-    });
+        verify(() => mockRelay.sendEvent(_testEvent)).called(1);
+      },
+    );
   });
 }

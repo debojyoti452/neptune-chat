@@ -34,7 +34,11 @@ void main() {
         ),
       ).thenAnswer((_) async => http.Response('{}', 200));
 
-      await service.announceLan(ip: '192.168.1.10', port: 9000, token: 'tok123');
+      await service.announceLan(
+        ip: '192.168.1.10',
+        port: 9000,
+        token: 'tok123',
+      );
 
       final captured = verify(
         () => mockClient.put(
@@ -48,8 +52,14 @@ void main() {
         (captured[0] as Uri).toString(),
         'http://localhost:4000/api/v1/peers/me/hints',
       );
-      expect((captured[1] as Map<String, String>)['Authorization'], 'Bearer tok123');
-      expect((captured[1] as Map<String, String>)['Content-Type'], 'application/json');
+      expect(
+        (captured[1] as Map<String, String>)['Authorization'],
+        'Bearer tok123',
+      );
+      expect(
+        (captured[1] as Map<String, String>)['Content-Type'],
+        'application/json',
+      );
 
       final body = jsonDecode(captured[2] as String) as Map<String, dynamic>;
       expect(body['ip'], '192.168.1.10');
@@ -90,13 +100,18 @@ void main() {
 
   group('fetchLanHint', () {
     void stubGet(String body, int status) {
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenAnswer((_) async => http.Response(body, status));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenAnswer((_) async => http.Response(body, status));
     }
 
     test('returns PeerHint when response includes lan transport', () async {
       stubGet(
-        jsonEncode({'ip': '192.168.1.5', 'port': 8888, 'transports': ['lan']}),
+        jsonEncode({
+          'ip': '192.168.1.5',
+          'port': 8888,
+          'transports': ['lan'],
+        }),
         200,
       );
 
@@ -109,21 +124,29 @@ void main() {
 
     test('sends GET to correct URL with auth header', () async {
       stubGet(
-        jsonEncode({'ip': '10.0.0.1', 'port': 9001, 'transports': ['lan']}),
+        jsonEncode({
+          'ip': '10.0.0.1',
+          'port': 9001,
+          'transports': ['lan'],
+        }),
         200,
       );
 
       await service.fetchLanHint('abc123pubkey', 'mytoken');
 
       final captured = verify(
-        () => mockClient.get(captureAny(), headers: captureAny(named: 'headers')),
+        () =>
+            mockClient.get(captureAny(), headers: captureAny(named: 'headers')),
       ).captured;
 
       expect(
         (captured[0] as Uri).toString(),
         'http://localhost:4000/api/v1/peers/abc123pubkey/hints',
       );
-      expect((captured[1] as Map<String, String>)['Authorization'], 'Bearer mytoken');
+      expect(
+        (captured[1] as Map<String, String>)['Authorization'],
+        'Bearer mytoken',
+      );
     });
 
     test('returns null when status is not 200', () async {
@@ -133,7 +156,11 @@ void main() {
 
     test('returns null when transports does not include lan', () async {
       stubGet(
-        jsonEncode({'ip': '192.168.1.5', 'port': 8888, 'transports': ['ble']}),
+        jsonEncode({
+          'ip': '192.168.1.5',
+          'port': 8888,
+          'transports': ['ble'],
+        }),
         200,
       );
       expect(await service.fetchLanHint('peer1', 'tok'), isNull);
@@ -149,7 +176,10 @@ void main() {
 
     test('returns null when ip is missing', () async {
       stubGet(
-        jsonEncode({'port': 8888, 'transports': ['lan']}),
+        jsonEncode({
+          'port': 8888,
+          'transports': ['lan'],
+        }),
         200,
       );
       expect(await service.fetchLanHint('peer1', 'tok'), isNull);
@@ -157,15 +187,19 @@ void main() {
 
     test('returns null when port is missing', () async {
       stubGet(
-        jsonEncode({'ip': '192.168.1.5', 'transports': ['lan']}),
+        jsonEncode({
+          'ip': '192.168.1.5',
+          'transports': ['lan'],
+        }),
         200,
       );
       expect(await service.fetchLanHint('peer1', 'tok'), isNull);
     });
 
     test('returns null when http client throws', () async {
-      when(() => mockClient.get(any(), headers: any(named: 'headers')))
-          .thenThrow(Exception('timeout'));
+      when(
+        () => mockClient.get(any(), headers: any(named: 'headers')),
+      ).thenThrow(Exception('timeout'));
       expect(await service.fetchLanHint('peer1', 'tok'), isNull);
     });
 

@@ -68,16 +68,18 @@ void main() {
         sig: '',
       ),
     );
-    registerFallbackValue(MessageModel(
-      id: 'id',
-      sessionId: _sessionId,
-      peerPubkey: _peerPubkey,
-      ciphertext: '',
-      nonce: '',
-      direction: 'sent',
-      transport: 'internet',
-      sentAt: 0,
-    ));
+    registerFallbackValue(
+      MessageModel(
+        id: 'id',
+        sessionId: _sessionId,
+        peerPubkey: _peerPubkey,
+        ciphertext: '',
+        nonce: '',
+        direction: 'sent',
+        transport: 'internet',
+        sentAt: 0,
+      ),
+    );
   });
 
   setUp(() {
@@ -109,8 +111,9 @@ void main() {
 
   group('getSessions', () {
     test('returns Right with mapped sessions from datasource', () async {
-      when(() => mockSessionDs.getAllSessions())
-          .thenAnswer((_) async => [_sessionModel]);
+      when(
+        () => mockSessionDs.getAllSessions(),
+      ).thenAnswer((_) async => [_sessionModel]);
 
       final result = await repo.getSessions();
 
@@ -131,25 +134,25 @@ void main() {
     });
 
     test('returns Left(storage) on datasource error', () async {
-      when(() => mockSessionDs.getAllSessions())
-          .thenThrow(Exception('db error'));
+      when(
+        () => mockSessionDs.getAllSessions(),
+      ).thenThrow(Exception('db error'));
 
       final result = await repo.getSessions();
 
       expect(result, isA<Left>());
-      expect(
-        (result as Left).value,
-        isA<Failure>(),
-      );
+      expect((result as Left).value, isA<Failure>());
     });
   });
 
   group('restoreSession', () {
     test('returns Right(session) when session exists in DB', () async {
-      when(() => mockSessionDs.getSession(_sessionId))
-          .thenAnswer((_) async => _sessionModel);
-      when(() => mockKeyStorage.getIdentityPrivKey())
-          .thenAnswer((_) async => null);
+      when(
+        () => mockSessionDs.getSession(_sessionId),
+      ).thenAnswer((_) async => _sessionModel);
+      when(
+        () => mockKeyStorage.getIdentityPrivKey(),
+      ).thenAnswer((_) async => null);
 
       final result = await repo.restoreSession(_sessionId);
 
@@ -159,23 +162,28 @@ void main() {
       expect(session.peerPubkey, _peerPubkey);
     });
 
-    test('returns Right(session) without error when called twice (idempotent)',
-        () async {
-      when(() => mockSessionDs.getSession(_sessionId))
-          .thenAnswer((_) async => _sessionModel);
-      when(() => mockKeyStorage.getIdentityPrivKey())
-          .thenAnswer((_) async => null);
+    test(
+      'returns Right(session) without error when called twice (idempotent)',
+      () async {
+        when(
+          () => mockSessionDs.getSession(_sessionId),
+        ).thenAnswer((_) async => _sessionModel);
+        when(
+          () => mockKeyStorage.getIdentityPrivKey(),
+        ).thenAnswer((_) async => null);
 
-      await repo.restoreSession(_sessionId);
-      final result = await repo.restoreSession(_sessionId);
+        await repo.restoreSession(_sessionId);
+        final result = await repo.restoreSession(_sessionId);
 
-      expect(result, isA<Right>());
-      verify(() => mockSessionDs.getSession(_sessionId)).called(1);
-    });
+        expect(result, isA<Right>());
+        verify(() => mockSessionDs.getSession(_sessionId)).called(1);
+      },
+    );
 
     test('returns Left(notFound) when session not in DB', () async {
-      when(() => mockSessionDs.getSession(_sessionId))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockSessionDs.getSession(_sessionId),
+      ).thenAnswer((_) async => null);
 
       final result = await repo.restoreSession(_sessionId);
 
@@ -186,22 +194,27 @@ void main() {
   });
 
   group('loadHistory auto-hydrate', () {
-    test('hydrates session from DB and returns empty history when no messages',
-        () async {
-      when(() => mockSessionDs.getSession(_sessionId))
-          .thenAnswer((_) async => _sessionModel);
-      when(() => mockLocal.getMessages(_sessionId))
-          .thenAnswer((_) async => []);
+    test(
+      'hydrates session from DB and returns empty history when no messages',
+      () async {
+        when(
+          () => mockSessionDs.getSession(_sessionId),
+        ).thenAnswer((_) async => _sessionModel);
+        when(
+          () => mockLocal.getMessages(_sessionId),
+        ).thenAnswer((_) async => []);
 
-      final result = await repo.loadHistory(_sessionId);
+        final result = await repo.loadHistory(_sessionId);
 
-      expect(result, isA<Right>());
-      expect((result as Right).value, isEmpty);
-    });
+        expect(result, isA<Right>());
+        expect((result as Right).value, isEmpty);
+      },
+    );
 
     test('returns Left(notFound) when session not in DB or memory', () async {
-      when(() => mockSessionDs.getSession(_sessionId))
-          .thenAnswer((_) async => null);
+      when(
+        () => mockSessionDs.getSession(_sessionId),
+      ).thenAnswer((_) async => null);
 
       final result = await repo.loadHistory(_sessionId);
 
