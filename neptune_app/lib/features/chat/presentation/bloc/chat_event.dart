@@ -8,6 +8,8 @@ part 'chat_event.freezed.dart';
 sealed class ChatEvent with _$ChatEvent {
   const factory ChatEvent.sessionStarted({required String peerPubkey}) =
       ChatSessionStarted;
+  const factory ChatEvent.sessionRestored({required String sessionId}) =
+      ChatSessionRestored;
   const factory ChatEvent.messageSent({required String content}) =
       ChatMessageSent;
   const factory ChatEvent.messageReceived({required Message message}) =

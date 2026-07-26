@@ -21,6 +21,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   ChatBloc(this._repository, this._sendMessage, this._loadHistory)
     : super(const ChatState.initial()) {
     on<ChatSessionStarted>(_onSessionStarted);
+    on<ChatSessionRestored>(_onSessionRestored);
     on<ChatMessageSent>(_onMessageSent);
     on<ChatMessageReceived>(_onMessageReceived);
     on<ChatHistoryLoaded>(_onHistoryLoaded);
@@ -45,6 +46,32 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
             .listen((msg) => add(ChatEvent.messageReceived(message: msg)));
 
         add(ChatEvent.historyLoaded(messages: const []));
+        _loadHistory(session.id).then(
+          (result) => result.fold(
+            (_) {},
+            (msgs) => add(ChatEvent.historyLoaded(messages: msgs)),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onSessionRestored(
+    ChatSessionRestored event,
+    Emitter<ChatState> emit,
+  ) async {
+    emit(const ChatState.connecting());
+
+    final result = await _repository.restoreSession(event.sessionId);
+    result.fold(
+      (failure) => emit(ChatState.error(message: failure.toString())),
+      (session) {
+        emit(ChatState.active(session: session, messages: const []));
+
+        _incomingSub = _repository
+            .incomingMessages(session.id)
+            .listen((msg) => add(ChatEvent.messageReceived(message: msg)));
+
         _loadHistory(session.id).then(
           (result) => result.fold(
             (_) {},

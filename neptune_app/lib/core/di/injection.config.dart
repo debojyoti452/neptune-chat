@@ -12,6 +12,8 @@
 import 'package:get_it/get_it.dart' as _i174;
 import 'package:http/http.dart' as _i519;
 import 'package:injectable/injectable.dart' as _i526;
+import 'package:neptune_app/core/ble/ble_channel.dart' as _i804;
+import 'package:neptune_app/core/ble/ble_service.dart' as _i134;
 import 'package:neptune_app/core/crypto/key_storage_service.dart' as _i26;
 import 'package:neptune_app/core/di/app_module.dart' as _i317;
 import 'package:neptune_app/core/discovery/peer_discovery_service.dart'
@@ -59,13 +61,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.singleton<_i26.KeyStorageService>(() => appModule.keyStorageService);
     gh.singleton<_i643.NostrRelayClient>(() => appModule.nostrRelayClient);
     gh.singleton<_i519.Client>(() => appModule.httpClient);
-    gh.singleton<_i254.PeerDiscoveryService>(
-      () => _i254.PeerDiscoveryService(
-        gh<_i519.Client>(),
-        gh<String>(instanceName: 'apiBaseUrl'),
-      ),
-    );
-    gh.singleton<_i157.InboundServer>(() => _i157.InboundServer());
+    gh.lazySingleton<_i804.BleChannel>(() => _i804.BleChannel());
+    gh.lazySingleton<_i157.InboundServer>(() => _i157.InboundServer());
     gh.factory<String>(() => appModule.apiBaseUrl, instanceName: 'apiBaseUrl');
     gh.factory<_i33.ChatSessionDatasource>(
       () => _i33.ChatSessionDatasourceImpl(gh<_i871.EncryptedDb>()),
@@ -73,23 +70,8 @@ extension GetItInjectableX on _i174.GetIt {
     gh.factory<_i941.ChatLocalDatasource>(
       () => _i941.ChatLocalDatasourceImpl(gh<_i871.EncryptedDb>()),
     );
-    gh.singleton<_i435.TransportRouter>(
-      () => _i435.TransportRouter(
-        internetRelay: gh<_i643.NostrRelayClient>(),
-        discovery: gh<_i254.PeerDiscoveryService>(),
-        keyStorage: gh<_i26.KeyStorageService>(),
-      ),
-    );
-    gh.lazySingleton<_i707.ChatRepository>(
-      () => _i1054.ChatRepositoryImpl(
-        gh<_i941.ChatLocalDatasource>(),
-        gh<_i33.ChatSessionDatasource>(),
-        gh<_i26.KeyStorageService>(),
-        gh<_i435.TransportRouter>(),
-        gh<_i643.NostrRelayClient>(),
-        gh<_i157.InboundServer>(),
-        gh<_i254.PeerDiscoveryService>(),
-      ),
+    gh.lazySingleton<_i134.BleService>(
+      () => _i134.BleService(gh<_i804.BleChannel>()),
     );
     gh.factory<_i805.AuthRemoteDatasource>(
       () => _i805.AuthRemoteDatasourceImpl(
@@ -103,11 +85,43 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i26.KeyStorageService>(),
       ),
     );
+    gh.lazySingleton<_i254.PeerDiscoveryService>(
+      () => _i254.PeerDiscoveryService(
+        gh<_i519.Client>(),
+        gh<String>(instanceName: 'apiBaseUrl'),
+      ),
+    );
+    gh.lazySingleton<_i435.TransportRouter>(
+      () => _i435.TransportRouter(
+        internetRelay: gh<_i643.NostrRelayClient>(),
+        discovery: gh<_i254.PeerDiscoveryService>(),
+        keyStorage: gh<_i26.KeyStorageService>(),
+        ble: gh<_i134.BleService>(),
+      ),
+    );
     gh.factory<_i403.LoadIdentity>(
       () => _i403.LoadIdentity(gh<_i625.AuthRepository>()),
     );
     gh.factory<_i564.RegisterIdentity>(
       () => _i564.RegisterIdentity(gh<_i625.AuthRepository>()),
+    );
+    gh.factory<_i535.AuthCubit>(
+      () => _i535.AuthCubit(
+        gh<_i403.LoadIdentity>(),
+        gh<_i564.RegisterIdentity>(),
+      ),
+    );
+    gh.lazySingleton<_i707.ChatRepository>(
+      () => _i1054.ChatRepositoryImpl(
+        gh<_i941.ChatLocalDatasource>(),
+        gh<_i33.ChatSessionDatasource>(),
+        gh<_i26.KeyStorageService>(),
+        gh<_i435.TransportRouter>(),
+        gh<_i643.NostrRelayClient>(),
+        gh<_i157.InboundServer>(),
+        gh<_i254.PeerDiscoveryService>(),
+        gh<_i134.BleService>(),
+      ),
     );
     gh.factory<_i367.LoadLocalHistory>(
       () => _i367.LoadLocalHistory(gh<_i707.ChatRepository>()),
@@ -120,12 +134,6 @@ extension GetItInjectableX on _i174.GetIt {
         gh<_i707.ChatRepository>(),
         gh<_i100.SendMessage>(),
         gh<_i367.LoadLocalHistory>(),
-      ),
-    );
-    gh.factory<_i535.AuthCubit>(
-      () => _i535.AuthCubit(
-        gh<_i403.LoadIdentity>(),
-        gh<_i564.RegisterIdentity>(),
       ),
     );
     return this;

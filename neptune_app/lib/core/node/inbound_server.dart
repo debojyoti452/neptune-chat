@@ -12,7 +12,7 @@ import '../nostr/nostr_event.dart';
 
 typedef InboundEventHandler = Future<void> Function(NostrEvent event);
 
-@singleton
+@lazySingleton
 class InboundServer {
   HttpServer? _server;
   int? _port;

@@ -6,6 +6,8 @@ import '../entities/message.dart';
 
 abstract interface class ChatRepository {
   Future<Either<Failure, ChatSession>> startSession(String peerPubkey);
+  Future<Either<Failure, ChatSession>> restoreSession(String sessionId);
+  Future<Either<Failure, List<ChatSession>>> getSessions();
   Future<Either<Failure, Unit>> sendMessage(String sessionId, String content);
   Future<Either<Failure, List<Message>>> loadHistory(String sessionId);
   Future<Either<Failure, Unit>> endSession(String sessionId);

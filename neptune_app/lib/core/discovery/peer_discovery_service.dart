@@ -8,7 +8,7 @@ import 'package:network_info_plus/network_info_plus.dart';
 
 const _serviceType = '_neptune._tcp';
 
-@singleton
+@lazySingleton
 class PeerDiscoveryService {
   final http.Client _client;
   final String _baseUrl;

@@ -6,6 +6,7 @@ import 'package:dartz/dartz.dart';
 import 'package:injectable/injectable.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/ble/ble_service.dart';
 import '../../../../core/crypto/key_storage_service.dart';
 import '../../../../core/discovery/peer_discovery_service.dart';
 import '../../../../core/error/failures.dart';
@@ -34,6 +35,7 @@ class ChatRepositoryImpl implements ChatRepository {
   final NostrRelayClient _relay;
   final InboundServer _inboundServer;
   final PeerDiscoveryService _discovery;
+  final BleService _bleService;
 
   final _sessions = <String, (ChatSession, Uint8List)>{};
   final _incomingControllers = <String, StreamController<Message>>{};
@@ -48,8 +50,10 @@ class ChatRepositoryImpl implements ChatRepository {
     this._relay,
     this._inboundServer,
     this._discovery,
+    this._bleService,
   ) {
     _inboundServer.onEvent = (event) async => _onRelayEvent(event);
+    _bleService.onEvent = (event) async => _onRelayEvent(event);
   }
 
   @override
@@ -87,6 +91,7 @@ class ChatRepositoryImpl implements ChatRepository {
 
       _ensureRelaySubscription(myPubkey).ignore();
       _announceLan().ignore();
+      _bleService.start(myPubkey).ignore();
       return Right(session);
     } catch (e) {
       return Left(Failure.network(message: e.toString()));
@@ -153,8 +158,69 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
+  Future<Either<Failure, List<ChatSession>>> getSessions() async {
+    try {
+      final models = await _sessionDatasource.getAllSessions();
+      return Right(models.map((m) => m.toEntity()).toList());
+    } catch (e) {
+      return Left(Failure.storage(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ChatSession>> restoreSession(String sessionId) async {
+    try {
+      if (_sessions.containsKey(sessionId)) {
+        return Right(_sessions[sessionId]!.$1);
+      }
+      final hydrateResult = await _hydrateSession(sessionId);
+      if (hydrateResult == null) {
+        return const Left(Failure.notFound(message: 'Session not found'));
+      }
+      final (session, _) = hydrateResult;
+
+      _incomingControllers[sessionId] ??= StreamController<Message>.broadcast();
+
+      final privkey = await _keyStorage.getIdentityPrivKey();
+      if (privkey != null) {
+        final myPubkey = NostrKeyService.pubkeyFromPrivkey(privkey);
+        _ensureRelaySubscription(myPubkey).ignore();
+        _bleService.start(myPubkey).ignore();
+      }
+
+      return Right(session);
+    } catch (e) {
+      return Left(Failure.network(message: e.toString()));
+    }
+  }
+
+  Future<(ChatSession, Uint8List)?> _hydrateSession(String sessionId) async {
+    final cached = _sessions[sessionId];
+    if (cached != null) return cached;
+
+    final model = await _sessionDatasource.getSession(sessionId);
+    if (model == null) return null;
+
+    final convKey = Uint8List.fromList(
+      List.generate(
+        model.conversationKeyHex.length ~/ 2,
+        (i) => int.parse(
+          model.conversationKeyHex.substring(i * 2, i * 2 + 2),
+          radix: 16,
+        ),
+      ),
+    );
+
+    final session = model.toEntity();
+    _sessions[sessionId] = (session, convKey);
+    return (session, convKey);
+  }
+
+  @override
   Future<Either<Failure, List<Message>>> loadHistory(String sessionId) async {
     try {
+      await _hydrateSession(sessionId);
+
       final cached = _sessions[sessionId];
       if (cached == null) {
         return const Left(Failure.notFound(message: 'Session not found'));
@@ -191,6 +257,7 @@ class ChatRepositoryImpl implements ChatRepository {
         await _relaySub?.cancel();
         _relaySub = null;
         _relaySubscribed = false;
+        await _bleService.stop();
       }
 
       return const Right(unit);
