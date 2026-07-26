@@ -5,6 +5,16 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="$SCRIPT_DIR/neptune_backend"
 APP_DIR="$SCRIPT_DIR/neptune_app"
 
+install_hooks() {
+  local hook="$SCRIPT_DIR/.git/hooks/pre-commit"
+  if [ ! -f "$hook" ] || ! diff -q "$SCRIPT_DIR/hooks/pre-commit" "$hook" > /dev/null 2>&1; then
+    echo "==> Installing git hooks..."
+    cp "$SCRIPT_DIR/hooks/pre-commit" "$hook"
+    chmod +x "$hook"
+    echo "    Git hooks installed."
+  fi
+}
+
 setup_backend() {
   echo "==> Setting up backend..."
   cd "$BACKEND_DIR"
@@ -43,13 +53,16 @@ Neptune — local dev runner
 Usage:
   $0 backend        setup + run Elixir/Phoenix backend
   $0 app            setup + run Flutter app
-  $0 setup          setup both without running
+  $0 setup          setup everything (hooks + backend + app)
   $0 setup backend  setup backend only
   $0 setup app      setup Flutter app only
+  $0 setup hooks    install git pre-commit hook
 
 EOF
   exit 1
 }
+
+install_hooks
 
 case "${1:-}" in
   backend) run_backend ;;
@@ -58,6 +71,7 @@ case "${1:-}" in
     case "${2:-all}" in
       backend) setup_backend ;;
       app)     setup_app ;;
+      hooks)   ;;
       all)     setup_backend; setup_app ;;
       *)       usage ;;
     esac

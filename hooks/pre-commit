@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+APP_DIR="$REPO_ROOT/neptune_app"
+BACKEND_DIR="$REPO_ROOT/neptune_backend"
+
+has_staged_changes() {
+  git diff --cached --name-only | grep -q "^$1"
+}
+
+if has_staged_changes "neptune_app/"; then
+  echo "==> [pre-commit] Flutter: formatting..."
+  cd "$APP_DIR"
+  dart format lib test
+  git -C "$REPO_ROOT" add $(git -C "$REPO_ROOT" diff --name-only -- "neptune_app/lib/" "neptune_app/test/" | tr '\n' ' ')
+
+  echo "==> [pre-commit] Flutter: analyzing..."
+  flutter analyze --fatal-infos lib/
+
+  echo "==> [pre-commit] Flutter: tests..."
+  flutter test
+fi
+
+if has_staged_changes "neptune_backend/"; then
+  echo "==> [pre-commit] Elixir: formatting..."
+  cd "$BACKEND_DIR"
+  mix format --check-formatted
+
+  echo "==> [pre-commit] Elixir: compiling..."
+  mix compile --warnings-as-errors
+
+  echo "==> [pre-commit] Elixir: tests..."
+  mix test
+fi
