@@ -22,14 +22,14 @@
 
 ## Core Principles
 
-| | Principle |
+| # | Principle |
 |---|---|
-| 🚫🗄️ | **Zero server persistence** — no chat content ever touches a backend database |
-| 📡 | **Every device is a node** — each device acts simultaneously as client, server, and relay |
-| 🔐 | **Everything on device is encrypted** — SQLCipher for structured data, hardware-backed Keychain/Keystore for keys |
-| 🔀 | **Transport-agnostic** — messages route over BLE, LAN, peer relay, or internet fallback, automatically |
-| 🔒 | **E2E encryption everywhere** — NIP-44 (ChaCha20-Poly1305) ensures the relay always sees ciphertext, never plaintext |
-| ⚡ | **Nostr-compatible** — NIP-01 relay protocol, NIP-44 encryption, secp256k1 identity keys |
+| 1 | **Zero server persistence** - no chat content ever touches a backend database |
+| 2 | **Every device is a node** - each device acts simultaneously as client, server, and relay |
+| 3 | **Everything on device is encrypted** - SQLCipher for structured data, hardware-backed Keychain/Keystore for keys |
+| 4 | **Transport-agnostic** - messages route over BLE, LAN, peer relay, or internet fallback, automatically |
+| 5 | **E2E encryption everywhere** - NIP-44 (ChaCha20-Poly1305) ensures the relay always sees ciphertext, never plaintext |
+| 6 | **Nostr-compatible** - NIP-01 relay protocol, NIP-44 encryption, secp256k1 identity keys |
 
 ---
 
@@ -64,9 +64,9 @@ The `TransportRouter` selects the best available path automatically:
 
 | Priority | Transport | Range | Internet Required |
 |:---:|---|---|:---:|
-| 🥇 1 | **BLE direct** | < 100 m | No |
-| 🥈 2 | **LAN / mDNS** | Same network | No |
-| 🥉 3 | **Peer relay** | Any distance | No |
+| 1 | **BLE direct** | < 100 m | No |
+| 2 | **LAN / mDNS** | Same network | No |
+| 3 | **Peer relay** | Any distance | No |
 | 4 | **Phoenix backend** | Any distance | Yes (fallback only) |
 
 ---
@@ -131,7 +131,7 @@ mix setup        # deps + DB + assets
 mix phx.server   # starts on http://localhost:4000
 ```
 
-Development uses SQLite3 — no external database required.
+Development uses SQLite3 - no external database required.
 
 ### Flutter App
 
@@ -150,7 +150,7 @@ flutter run \
   --dart-define=NEPTUNE_API_URL=http://localhost:4000
 ```
 
-> **First launch requires the backend.** On a clean install the app generates a secp256k1 keypair locally and calls `POST /api/v1/auth/register` to obtain a bearer token. Every subsequent launch reads the key locally — no network call is made.
+> **First launch requires the backend.** On a clean install the app generates a secp256k1 keypair locally and calls `POST /api/v1/auth/register` to obtain a bearer token. Every subsequent launch reads the key locally - no network call is made.
 
 ---
 
@@ -159,7 +159,7 @@ flutter run \
 - The backend stores only user identity (pubkey + auth token hash). Chat content is never written to any backend database.
 - All on-device data is encrypted at rest via SQLCipher. The encryption key is stored in the OS hardware-backed keystore.
 - Every message is signed with a BIP-340 Schnorr signature over the sender's secp256k1 private key. The relay verifies the signature before forwarding.
-- NIP-44 E2E encryption means the relay processes only ciphertext — the conversation key never leaves the two endpoints.
+- NIP-44 E2E encryption means the relay processes only ciphertext - the conversation key never leaves the two endpoints.
 - Ephemeral events (kinds 20000–29999) are never persisted by any NIP-01-compatible relay, including Neptune's own backend.
 
 ---
@@ -260,16 +260,16 @@ SQLITE_DB_PATH=/data/neptune.db PHX_SERVER=true ./bin/neptune_backend start
 
 | Phase | Feature | Status |
 |:---:|---------|:---:|
-| 1 | Encrypted local storage + SQLCipher boot sequence | ✅ Done |
-| 2 | secp256k1 identity keygen + NIP-44 encryption | ✅ Done |
-| 3 | Device InboundServer (NIP-01 relay) + mDNS LAN discovery | ✅ Done |
-| 4 | Ephemeral 1:1 chat — internet transport | ✅ Done |
-| 5 | Phoenix backend fallback relay (NIP-01 compatible) | ✅ Done |
-| 6 | BLE peer chat (Nostr events over native MethodChannel) | 🔄 In Progress |
-| 7 | Peer relay routing (device-as-relay, TTL envelope) | 📋 Planned |
-| 8 | Group chat (ephemeral, multi-transport) | 🔮 Future |
-| 9 | Full Nostr relay mesh interoperability | 🔮 Future |
-| 10 | Security audit + open source release | 🔮 Future |
+| 1 | Encrypted local storage + SQLCipher boot sequence | Done |
+| 2 | secp256k1 identity keygen + NIP-44 encryption | Done |
+| 3 | Device InboundServer (NIP-01 relay) + mDNS LAN discovery | Done |
+| 4 | Ephemeral 1:1 chat - internet transport | Done |
+| 5 | Phoenix backend fallback relay (NIP-01 compatible) | Done |
+| 6 | BLE peer chat (Nostr events over native MethodChannel) | In Progress |
+| 7 | Peer relay routing (device-as-relay, TTL envelope) | Planned |
+| 8 | Group chat (ephemeral, multi-transport) | Future |
+| 9 | Full Nostr relay mesh interoperability | Future |
+| 10 | Security audit + open source release | Future |
 
 ---
 
@@ -283,7 +283,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 Created by [Debojyoti Singha](https://github.com/debojyoti452).
 
-Inspired by [BitChat](https://github.com/permissionlesstech/bitchat) — a decentralised, censorship-resistant mesh messaging app that works over Bluetooth without internet.
+Inspired by [BitChat](https://github.com/permissionlesstech/bitchat) - a decentralised, censorship-resistant mesh messaging app that works over Bluetooth without internet.
 
 ---
 
