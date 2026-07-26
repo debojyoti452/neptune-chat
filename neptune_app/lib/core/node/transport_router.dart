@@ -10,7 +10,7 @@ import '../discovery/peer_discovery_service.dart';
 import '../nostr/nostr_event.dart';
 import '../nostr/nostr_relay_client.dart';
 
-@singleton
+@lazySingleton
 class TransportRouter {
   TransportRouter({
     required this._internetRelay,

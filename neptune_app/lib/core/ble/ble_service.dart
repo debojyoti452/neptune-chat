@@ -12,7 +12,7 @@ import 'ble_message_codec.dart';
 
 typedef InboundEventHandler = Future<void> Function(NostrEvent event);
 
-@singleton
+@lazySingleton
 class BleService {
   BleService(this._channel);
 

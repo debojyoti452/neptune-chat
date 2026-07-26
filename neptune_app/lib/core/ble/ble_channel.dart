@@ -5,7 +5,7 @@ import 'package:injectable/injectable.dart';
 
 import 'ble_constants.dart';
 
-@singleton
+@lazySingleton
 class BleChannel {
   static const _method = MethodChannel('com.neptune.app/ble');
   static const _event = EventChannel('com.neptune.app/ble/events');
