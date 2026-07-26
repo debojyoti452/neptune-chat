@@ -2,6 +2,8 @@
 
 Privacy-first, open-source, ephemeral messaging. Every device is a node.
 
+[![Neptune Demo](https://img.youtube.com/vi/n8Fjz8eYRIg/0.jpg)](https://www.youtube.com/watch?v=n8Fjz8eYRIg)
+
 ---
 
 ## Core Principles
