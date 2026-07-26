@@ -24,6 +24,18 @@ clean_app() {
   echo "    Flutter app clean done."
 }
 
+install_hooks() {
+  local hook="$SCRIPT_DIR/.git/hooks/pre-commit"
+  if [ ! -f "$hook" ] || ! diff -q "$SCRIPT_DIR/hooks/pre-commit" "$hook" > /dev/null 2>&1; then
+    echo "==> Installing git hooks..."
+    cp "$SCRIPT_DIR/hooks/pre-commit" "$hook"
+    chmod +x "$hook"
+    echo "    Git hooks installed."
+  fi
+}
+
+install_hooks
+
 case "${1:-all}" in
   backend) clean_backend ;;
   app)     clean_app ;;
